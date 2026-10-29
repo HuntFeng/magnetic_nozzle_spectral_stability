@@ -9,10 +9,13 @@
 # are resolved). Functions (columns of the quasimatrices) are stored as
 # Chebyshev coefficients on [-1, 1].
 import os
+import ctypes
+import signal
 import warnings
 import traceback
 import multiprocessing
 from dataclasses import dataclass, field
+from functools import lru_cache
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 import scipy.linalg as la
@@ -22,6 +25,11 @@ from numpy.polynomial.chebyshev import chebval, chebvander
 from numpy.polynomial.legendre import leggauss
 from typing import Callable
 from numpy.typing import NDArray
+
+
+@lru_cache(maxsize=None)
+def _leggauss(n: int) -> tuple[NDArray, NDArray]:
+    return leggauss(n)
 
 
 def _available_cpus() -> int:
@@ -166,7 +174,7 @@ class InfBeyn:
         grid, sqrt(w) makes the l2 product the L2 product. Also returns A1 on that grid.
         """
         nq = A0.shape[0] + 1
-        xq, wq = leggauss(nq)
+        xq, wq = _leggauss(nq)
         sw = np.sqrt(wq)[:, None]
         A0q = sw * chebval(xq, A0).T
         A1q = sw * chebval(xq, A1).T
@@ -229,6 +237,7 @@ class InfBeyn:
         noise_tol: float = 1e-11,
         quad_tol: float = 1e-4,
         max_rank: int | None = None,
+        max_resolvent: float = 1e6,
         backend: str = "auto",
         n_workers: int | None = None,
         comm=None,
@@ -239,11 +248,20 @@ class InfBeyn:
         by adaptive subdivision into rectangular tiles. Each tile runs InfBeyn on its
         boundary and is accepted only if
           - the singular values of A0 have a clear gap (s_m / s_{m+1} >= gap_tol,
-            s_m > noise_tol relative to the resolvent scale): the count m is unambiguous,
+            s_m above the noise floor noise_tol * median ||T(z)^{-1}V|| / ||V|| on the
+            boundary, relative to the resolvent scale): the count m is unambiguous,
           - m <= max_rank (default n_func // 2): enough random probes to spare,
           - the eigenvalues agree with those of the nested half rule (every other
             node, no extra solves) to quad_tol * tile size: the quadrature has converged,
           - every BVP solve on its boundary is resolved.
+        The resolvent ||T(z)^{-1}|| >= ||T(z)^{-1}V|| / ||V|| is known at every node.
+        Where it exceeds max_resolvent, z is certified to lie in the
+        (1/max_resolvent)-pseudospectrum, and the contour integrals are swamped by
+        rounding errors (e.g. the exponentially growing resolvent of a strongly
+        non-normal T): eigenvalues there cannot be told apart from pseudospectral
+        noise. A tile whose median boundary node exceeds max_resolvent is split
+        (only where it straddles the level set), and is not split at all, but
+        reported as unresolved ("pseudospectrum"), if every node exceeds it.
         Otherwise the tile is split into four, with cut lines moved away from the
         eigenvalue estimates. Tiles failing at max_depth are returned as unresolved
         (e.g. accumulating eigenvalues or continuous spectrum: inspect with pseudospectra()).
@@ -272,6 +290,7 @@ class InfBeyn:
             region: (re_min, re_max, im_min, im_max)
             n_edge: Clenshaw-Curtis degree on each edge (even)
             max_depth: maximum number of subdivisions of the initial tiles
+            max_resolvent: see above
             verbose: print the progress of each subdivision level (rank 0)
         Output:
             ScanResult (eigenvalues, eigenfunctions, accepted and unresolved tiles)
@@ -284,10 +303,14 @@ class InfBeyn:
             if ex.worker:
                 ex.serve()
             else:
-                result = self._scan(ex, region, n_edge, max_depth, gap_tol, noise_tol, quad_tol, max_rank, verbose)
+                result = self._scan(
+                    ex, region, n_edge, max_depth, gap_tol, noise_tol, quad_tol, max_rank, max_resolvent, verbose
+                )
         return ex.share(result)
 
-    def _scan(self, ex, region, n_edge, max_depth, gap_tol, noise_tol, quad_tol, max_rank, verbose) -> "ScanResult":
+    def _scan(
+        self, ex, region, n_edge, max_depth, gap_tol, noise_tol, quad_tol, max_rank, max_resolvent, verbose
+    ) -> "ScanResult":
         x0, x1, y0, y1 = map(float, region)
         V = self._generate_random_test_functions(self.n_func)
         pad = 0.015 * max(x1 - x0, y1 - y0)
@@ -317,10 +340,10 @@ class InfBeyn:
 
             nxt = []
             for t in pending:
-                self._assess(t, segments, gap_tol, noise_tol, quad_tol, max_rank)
+                self._assess(t, segments, gap_tol, noise_tol, quad_tol, max_rank, max_resolvent, la.norm(V))
                 if not t.reason:
                     accepted.append(t)
-                elif t.depth >= max_depth or t.reason == "unresolved BVP":
+                elif t.depth >= max_depth or t.reason in ("unresolved BVP", "pseudospectrum"):
                     unresolved.append(t)
                 else:
                     nxt += t.split()
@@ -371,7 +394,7 @@ class InfBeyn:
         """
         Integrals of T(z)^{-1}V and z T(z)^{-1}V along the edge a -> b, with the
         Clenshaw-Curtis rule and with its nested half rule (every other node).
-        Also the largest ||T(z)^{-1}V|| on the edge and whether all solves are resolved.
+        Also ||T(z)^{-1}V|| at each node and whether all solves are resolved.
         """
         z, w = _segment_nodes(*key, full)
         wh = (key[1] - key[0]) / 2 * half.w
@@ -384,25 +407,34 @@ class InfBeyn:
             if k % 2 == 0:
                 I[2, : c.shape[0]] += wh[k // 2] * c
                 I[3, : c.shape[0]] += wh[k // 2] * zk * c
-        norm = max(la.norm(c) for c, _ in sols)
-        return I, norm, all(r for _, r in sols)
+        norms = np.array([la.norm(c) for c, _ in sols])
+        return I, norms, all(r for _, r in sols)
 
-    def _assess(self, t: "Tile", segments: dict, gap_tol, noise_tol, quad_tol, max_rank) -> None:
+    def _assess(self, t: "Tile", segments: dict, gap_tol, noise_tol, quad_tol, max_rank, max_resolvent, norm_V) -> None:
         """Beyn on the boundary of tile t; fills its estimates and diagnostics, t.reason = "" if accepted."""
         parts = [(segments[key], sign) for key, sign in (_segment(p, q) for p, q in t.edges())]
         if not all(ok for (_, _, ok), _ in parts):
             t.reason = "unresolved BVP"
+            return
+        resolvent = np.concatenate([norms for (_, norms, _), _ in parts]) / norm_V  # lower bounds of ||T(z)^{-1}||
+        if resolvent.min() > max_resolvent:
+            t.reason = "pseudospectrum"  # whole boundary: stop
+            return
+        if np.median(resolvent) > max_resolvent:
+            t.reason = "partly pseudospectrum"  # noise floor too high to certify: split
             return
         n = max(I.shape[1] for (I, _, _), _ in parts)
         A = np.zeros((4, n, self.n_func), dtype=complex)
         for (I, _, _), sign in parts:
             A[:, : I.shape[1]] += sign * I
         A /= 2j * np.pi
-        scale = max(norm for (_, norm, _), _ in parts) * t.perimeter / (2 * np.pi)
+        scale = resolvent.max() * norm_V * t.perimeter / (2 * np.pi)
 
         U, s, Vh, A1q = self._moments_svd(A[0], A[1])
         t.singular_values = s / scale
-        t.rank, t.gap = _gap_rank(t.singular_values, noise_tol)
+        # the BVP solves lose accuracy in proportion to the resolvent (rounding in the
+        # collocation solve); the median ignores the few nodes close to a genuine pole
+        t.rank, t.gap = _gap_rank(t.singular_values, noise_tol * max(1.0, np.median(resolvent)))
         if t.rank == 0:
             return
         if t.gap < gap_tol:
@@ -749,6 +781,11 @@ def _init_worker(solver: InfBeyn, shared=None) -> None:
     _worker_shared = shared
     # one BLAS thread per process, otherwise n_workers x n_cpu threads fight (~5x slower)
     threadpool_limits(1)
+    # exit if the parent is killed (timeout, scancel, ...) instead of lingering as orphans
+    try:
+        ctypes.CDLL("libc.so.6").prctl(1, signal.SIGTERM)  # PR_SET_PDEATHSIG
+    except (OSError, AttributeError):
+        pass
 
 
 def _refine_one(task: tuple) -> NDArray:
