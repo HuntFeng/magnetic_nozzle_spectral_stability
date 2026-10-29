@@ -24,6 +24,13 @@ from typing import Callable
 from numpy.typing import NDArray
 
 
+def _available_cpus() -> int:
+    """CPUs this process may run on: respects Slurm/cgroup CPU masks, unlike os.cpu_count()."""
+    if hasattr(os, "sched_getaffinity"):
+        return len(os.sched_getaffinity(0))
+    return os.cpu_count() or 1
+
+
 class Cheb:
     """Chebyshev points x_j = cos(pi j/N), j = 0..N (x[0] = 1, x[-1] = -1) and differentiation matrices."""
 
@@ -194,7 +201,7 @@ class InfBeyn:
         The test functions are drawn up front, so the result does not depend on n_workers.
 
         Input:
-            n_workers: number of processes (default: one per CPU); 1 runs serially
+            n_workers: number of processes (default: one per CPU available to this process); 1 runs serially
         Output:
             list of eigenvalues found inside each small circle
         """
@@ -202,7 +209,7 @@ class InfBeyn:
             (*circle_contour(lam, radius, n_nodes), self._generate_random_test_functions(self.n_func))
             for lam in eigvals
         ]
-        n_workers = min(n_workers or os.cpu_count() or 1, len(tasks))
+        n_workers = min(n_workers or _available_cpus(), len(tasks))
         if n_workers <= 1:
             return [self._solve(*task)[0] for task in tasks]
         with ProcessPoolExecutor(
@@ -253,7 +260,7 @@ class InfBeyn:
         All new BVP solves of one subdivision level, and all polishing steps, run in
         parallel on the chosen backend:
             "serial": this process
-            "fork":   n_workers forked processes on this machine (default: one per CPU)
+            "fork":   n_workers forked processes on this machine (default: one per CPU available to this process)
             "mpi":    all ranks of comm (default MPI.COMM_WORLD). SPMD: every rank runs
                       the same script and calls scan() with the same arguments; rank 0
                       drives the subdivision, the others only solve. Every rank gets
@@ -491,7 +498,7 @@ class InfBeyn:
             n: degree of the polynomial trial space (functions satisfying the BCs)
             n_range: Chebyshev grid on which T(z)u is evaluated (default 2n, which
                      makes the L2 norms exact for constant coefficients)
-            n_workers: number of processes (default: one per CPU); 1 runs serially
+            n_workers: number of processes (default: one per CPU available to this process); 1 runs serially
         Output:
             gamma: gamma_n(z), same shape as z
             floor: machine eps * max ||T(z) P_n^*||; gamma below floor is rounding noise
@@ -551,7 +558,7 @@ class InfBeyn:
         # build the cached operators before forking so workers inherit them
         self._psa_basis(n, n_range)
         self._psa_poly(n, n_range)
-        n_workers = min(n_workers or os.cpu_count() or 1, len(z))
+        n_workers = min(n_workers or _available_cpus(), len(z))
         chunks = [(n, n_range, c) for c in np.array_split(z, 4 * n_workers)]
         if n_workers <= 1:
             with threadpool_limits(1):  # small matrices: BLAS threads only add overhead
@@ -985,7 +992,7 @@ def _make_backend(backend: str, solver: InfBeyn, n_workers: int | None, comm):
         backend = "mpi" if comm is not None or _launched_by_mpi() else "fork"
     if backend == "mpi":
         return _MPIBackend(solver, comm)
-    n_workers = n_workers or os.cpu_count() or 1
+    n_workers = n_workers or _available_cpus()
     if backend == "serial" or n_workers == 1:
         return _SerialBackend(solver)
     if backend == "fork":
