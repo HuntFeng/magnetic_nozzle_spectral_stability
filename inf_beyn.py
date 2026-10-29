@@ -8,10 +8,14 @@
 # adaptively (Chebyshev collocation, doubling N until the Chebyshev coefficients
 # are resolved). Functions (columns of the quasimatrices) are stored as
 # Chebyshev coefficients on [-1, 1].
+import os
 import warnings
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 import scipy.linalg as la
 from scipy.fft import dct
+from threadpoolctl import threadpool_limits
 from numpy.polynomial.chebyshev import chebval
 from numpy.polynomial.legendre import leggauss
 from typing import Callable
@@ -107,7 +111,11 @@ class InfBeyn:
             eigfuncs: Chebyshev coefficients of the eigenfunctions, one per column
         """
         V = self._generate_random_test_functions(self.n_func)
-        A0, A1, scale = self._compute_quasimatrices(V)
+        return self._solve(self.nodes, self.weights, V)
+
+    def _solve(self, nodes: NDArray, weights: NDArray, V: NDArray):
+        """solve() on an explicit contour with explicit test functions V (no shared state)."""
+        A0, A1, scale = self._compute_quasimatrices(V, nodes, weights)
 
         # economized SVD of the quasimatrix A0 in L2(-1, 1):
         # sample on a Gauss-Legendre grid, sqrt(w) makes the l2 product the L2 product
@@ -134,31 +142,45 @@ class InfBeyn:
         eigfuncs = A0 @ V0 @ X
 
         # eigenvalues outside the contour cannot come from Keldysh's expansion
-        inside = self._inside_contour(eigvals)
+        inside = self._inside_contour(eigvals, nodes)
         return eigvals[inside], eigfuncs[:, inside]
 
-    def _inside_contour(self, z: NDArray) -> NDArray:
+    @staticmethod
+    def _inside_contour(z: NDArray, nodes: NDArray) -> NDArray:
         """Winding number of the (closed, ordered) quadrature nodes around each z."""
-        d = self.nodes[None, :] - np.asarray(z)[:, None]
+        d = nodes[None, :] - np.asarray(z)[:, None]
         winding = np.angle(np.roll(d, -1, axis=1) / d).sum(axis=1) / (2 * np.pi)
         return np.abs(winding) > 0.5
 
-    def refine(self, eigvals: NDArray, radius: float, n_nodes: int = 32):
+    def refine(self, eigvals: NDArray, radius: float, n_nodes: int = 32, n_workers: int | None = None):
         """
         Rerun InfBeyn on a small circle around each eigenvalue (Sec. 2.2 of the paper).
         True eigenvalues reappear at the same place; numerical artifacts (e.g. from
         resolvents too large to evaluate in floating point) vanish or move.
 
+        The circles are independent and are processed in parallel by forked worker
+        processes (Linux; T and bc may be lambdas since nothing is pickled but arrays).
+        The test functions are drawn up front, so the result does not depend on n_workers.
+
+        Input:
+            n_workers: number of processes (default: one per CPU); 1 runs serially
         Output:
             list of eigenvalues found inside each small circle
         """
-        nodes, weights = self.nodes, self.weights
-        refined = []
-        for lam in eigvals:
-            self.set_contour(*circle_contour(lam, radius, n_nodes))
-            refined.append(self.solve()[0])
-        self.set_contour(nodes, weights)
-        return refined
+        tasks = [
+            (*circle_contour(lam, radius, n_nodes), self._generate_random_test_functions(self.n_func))
+            for lam in eigvals
+        ]
+        n_workers = min(n_workers or os.cpu_count() or 1, len(tasks))
+        if n_workers <= 1:
+            return [self._solve(*task)[0] for task in tasks]
+        with ProcessPoolExecutor(
+            max_workers=n_workers,
+            mp_context=multiprocessing.get_context("fork"),
+            initializer=_init_worker,
+            initargs=(self,),
+        ) as pool:
+            return list(pool.map(_refine_one, tasks))
 
     def _cheb(self, N: int) -> Cheb:
         if N not in self._cheb_cache:
@@ -210,7 +232,7 @@ class InfBeyn:
                 return c
             N *= 2
 
-    def _compute_quasimatrices(self, V: NDArray[np.float64]):
+    def _compute_quasimatrices(self, V: NDArray[np.float64], nodes: NDArray, weights: NDArray):
         """
         Compute A0 and A1
 
@@ -223,20 +245,36 @@ class InfBeyn:
             A0, A1 as Chebyshev coefficients (padded to a common length) and the
             scale sum_k |w_k| ||T(z_k)^{-1}V|| / 2pi used as reference for the rank
         """
-        sols = [self._solve_bvp(z, V) for z in self.nodes]
+        sols = [self._solve_bvp(z, V) for z in nodes]
         n = max(c.shape[0] for c in sols)
 
         A0 = np.zeros((n, V.shape[1]), dtype=complex)
         A1 = np.zeros((n, V.shape[1]), dtype=complex)
         scale = 0.0
-        for z, w, c in zip(self.nodes, self.weights, sols):
+        for z, w, c in zip(nodes, weights, sols):
             A0[: c.shape[0]] += w * c
             A1[: c.shape[0]] += w * z * c
-            scale = max(scale, np.abs(w) * len(self.nodes) * la.norm(c, 2) / (2 * np.pi))
+            scale = max(scale, np.abs(w) * len(nodes) * la.norm(c, 2) / (2 * np.pi))
 
         A0 /= 2j * np.pi
         A1 /= 2j * np.pi
         return A0, A1, scale
+
+
+# refine() workers: the solver reaches each forked process through the initializer
+# (inherited, not pickled), so only the contour and test functions are sent per task
+_worker_solver: InfBeyn | None = None
+
+
+def _init_worker(solver: InfBeyn) -> None:
+    global _worker_solver
+    _worker_solver = solver
+    # one BLAS thread per process, otherwise n_workers x n_cpu threads fight (~5x slower)
+    threadpool_limits(1)
+
+
+def _refine_one(task: tuple) -> NDArray:
+    return _worker_solver._solve(*task)[0]
 
 
 if __name__ == "__main__":
