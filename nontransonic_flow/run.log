@@ -1,0 +1,305 @@
+
+== constant_subsonic_fixed_fixed: 22 eigenvalues, 5062 solves, scan 3s, verify 4s, psa 7s
+   1.1780972451+0.0000000000j  gamma 6.5e-10  halo 7.0e-01  |err| 2.9e-14  ok
+   2.3561944902+0.0000000000j  gamma 6.5e-10  halo 1.5e+00  |err| 3.5e-14  ok
+   3.5342917353+0.0000000000j  gamma 6.2e-10  halo 2.3e+00  |err| 7.8e-14  ok
+   4.7123889804-0.0000000000j  gamma 7.0e-10  halo 3.1e+00  |err| 2.4e-14  ok
+   5.8904862255-0.0000000000j  gamma 6.4e-10  halo 3.8e+00  |err| 3.6e-14  ok
+   7.0685834706-0.0000000000j  gamma 6.8e-10  halo 4.6e+00  |err| 4.1e-14  ok
+   8.2466807157+0.0000000000j  gamma 6.9e-10  halo 5.4e+00  |err| 2.0e-14  ok
+   9.4247779608-0.0000000000j  gamma 6.5e-10  halo 6.2e+00  |err| 2.0e-14  ok
+   10.6028752059-0.0000000000j  gamma 6.1e-10  halo 6.9e+00  |err| 1.4e-14  ok
+   11.7809724510-0.0000000000j  gamma 6.9e-10  halo 7.7e+00  |err| 3.1e-14  ok
+   12.9590696961-0.0000000000j  gamma 6.6e-10  halo 8.5e+00  |err| 1.4e-14  ok
+   14.1371669412-0.0000000000j  gamma 6.8e-10  halo 9.2e+00  |err| 4.8e-14  ok
+   15.3152641863-0.0000000000j  gamma 7.5e-10  halo 1.0e+01  |err| 2.7e-14  ok
+   16.4933614313-0.0000000000j  gamma 6.0e-10  halo 1.1e+01  |err| 1.0e-13  ok
+   17.6714586764-0.0000000000j  gamma 7.3e-10  halo 1.2e+01  |err| 9.3e-14  ok
+   18.8495559215-0.0000000000j  gamma 8.6e-10  halo 1.2e+01  |err| 1.1e-13  ok
+   20.0276531666-0.0000000000j  gamma 8.7e-10  halo 1.3e+01  |err| 1.0e-13  ok
+   21.2057504117-0.0000000000j  gamma 7.9e-10  halo 1.4e+01  |err| 3.0e-14  ok
+   22.3838476568+0.0000000000j  gamma 8.8e-10  halo 1.5e+01  |err| 2.3e-14  ok
+   23.5619449019-0.0000000000j  gamma 9.0e-10  halo 1.5e+01  |err| 2.9e-14  ok
+   24.7400421470-0.0000000000j  gamma 1.0e-09  halo 1.6e+01  |err| 2.8e-14  ok
+   25.9181393921-0.0000000000j  gamma 1.2e-09  halo 1.7e+01  |err| 4.1e-14  ok
+
+== constant_subsonic_fixed_open: 22 eigenvalues, 1858 solves, scan 2s, verify 5s, psa 7s
+   0.5890486225-0.2059898041j  gamma 9.0e-10  halo 2.7e-01  |err| 5.9e-01  ok
+   1.7671458676-0.2059898041j  gamma 7.0e-10  halo 8.3e-01  |err| 5.9e-01  ok
+   2.9452431127-0.2059898041j  gamma 9.1e-10  halo 1.4e+00  |err| 5.9e-01  ok
+   4.1233403578-0.2059898041j  gamma 8.4e-10  halo 2.0e+00  |err| 5.9e-01  ok
+   5.3014376029-0.2059898041j  gamma 7.0e-10  halo 2.6e+00  |err| 5.9e-01  ok
+   6.4795348480-0.2059898041j  gamma 7.4e-10  halo 3.2e+00  |err| 5.9e-01  ok
+   7.6576320931-0.2059898041j  gamma 7.5e-10  halo 3.8e+00  |err| 5.9e-01  ok
+   8.8357293382-0.2059898041j  gamma 7.6e-10  halo 4.4e+00  |err| 5.9e-01  ok
+   10.0138265833-0.2059898041j  gamma 8.5e-10  halo 5.0e+00  |err| 5.9e-01  ok
+   11.1919238284-0.2059898041j  gamma 7.9e-10  halo 5.6e+00  |err| 5.9e-01  ok
+   12.3700210735-0.2059898041j  gamma 8.3e-10  halo 6.2e+00  |err| 5.9e-01  ok
+   13.5481183186-0.2059898041j  gamma 7.7e-10  halo 6.8e+00  |err| 5.9e-01  ok
+   14.7262155637-0.2059898041j  gamma 7.6e-10  halo 7.4e+00  |err| 5.9e-01  ok
+   15.9043128088-0.2059898041j  gamma 7.7e-10  halo 8.0e+00  |err| 5.9e-01  ok
+   17.0824100539-0.2059898041j  gamma 6.8e-10  halo 8.6e+00  |err| 5.9e-01  ok
+   18.2605072990-0.2059898041j  gamma 7.6e-10  halo 9.2e+00  |err| 5.9e-01  ok
+   19.4386045441-0.2059898041j  gamma 7.3e-10  halo 9.8e+00  |err| 5.9e-01  ok
+   20.6167017892-0.2059898041j  gamma 7.9e-10  halo 1.0e+01  |err| 5.9e-01  ok
+   21.7947990343-0.2059898041j  gamma 7.9e-10  halo 1.1e+01  |err| 5.9e-01  ok
+   22.9728962794-0.2059898041j  gamma 8.4e-10  halo 1.2e+01  |err| 5.9e-01  ok
+   24.1509935245-0.2059898041j  gamma 8.8e-10  halo 1.2e+01  |err| 5.9e-01  ok
+   25.3290907696-0.2059898041j  gamma 9.9e-10  halo 1.3e+01  |err| 5.9e-01  ok
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+
+== constant_supersonic_fixed_fixed: 13 eigenvalues, 1167 solves, scan 2s, verify 4s, psa 7s
+   1.9634954085-0.0000000000j  gamma 2.1e-09  halo 7.4e-01  |err| 3.0e-13  ok
+   3.9269908170+0.0000000000j  gamma 1.9e-09  halo 1.5e+00  |err| 5.8e-14  ok
+   5.8904862255-0.0000000000j  gamma 2.2e-09  halo 2.2e+00  |err| 1.1e-13  ok
+   7.8539816340-0.0000000000j  gamma 2.1e-09  halo 3.0e+00  |err| 2.8e-14  ok
+   9.8174770425+0.0000000000j  gamma 2.0e-09  halo 3.7e+00  |err| 7.1e-14  ok
+   11.7809724510-0.0000000000j  gamma 1.8e-09  halo 4.4e+00  |err| 3.5e-14  ok
+   13.7444678595-0.0000000000j  gamma 2.0e-09  halo 5.2e+00  |err| 7.6e-14  ok
+   15.7079632679-0.0000000000j  gamma 1.8e-09  halo 5.9e+00  |err| 5.2e-14  ok
+   17.6714586764-0.0000000000j  gamma 2.2e-09  halo 6.7e+00  |err| 3.0e-13  ok
+   19.6349540849+0.0000000000j  gamma 2.1e-09  halo 7.4e+00  |err| 2.3e-13  ok
+   21.5984494934-0.0000000000j  gamma 2.1e-09  halo 8.1e+00  |err| 4.3e-14  ok
+   23.5619449019+0.0000000000j  gamma 2.1e-09  halo 8.9e+00  |err| 1.5e-13  ok
+   25.5254403104+0.0000000000j  gamma 2.3e-09  halo 9.6e+00  |err| 9.7e-14  ok
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+
+== constant_supersonic_fixed_open: 14 eigenvalues, 790 solves, scan 2s, verify 4s, psa 7s
+  -0.0000000000+0.5029493477j  gamma 1.0e-09  halo 3.4e-01  |err| 2.1e-11  ok
+   1.9634954085+0.5029493476j  gamma 7.5e-10  halo 4.0e-01  |err| 1.7e-12  ok
+   3.9269908170+0.5029493476j  gamma 6.1e-10  halo 6.8e-01  |err| 1.2e-12  ok
+   5.8904862255+0.5029493476j  gamma 7.3e-10  halo 9.9e-01  |err| 9.3e-13  ok
+   7.8539816340+0.5029493476j  gamma 9.2e-10  halo 1.3e+00  |err| 9.5e-14  ok
+   9.8174770425+0.5029493476j  gamma 8.9e-10  halo 1.6e+00  |err| 3.0e-13  ok
+   11.7809724510+0.5029493476j  gamma 8.1e-10  halo 1.9e+00  |err| 1.6e-13  ok
+   13.7444678595+0.5029493476j  gamma 7.9e-10  halo 2.2e+00  |err| 1.0e-12  ok
+   15.7079632679+0.5029493476j  gamma 6.8e-10  halo 2.6e+00  |err| 8.7e-13  ok
+   17.6714586764+0.5029493476j  gamma 7.9e-10  halo 2.9e+00  |err| 8.3e-13  ok
+   19.6349540849+0.5029493476j  gamma 8.4e-10  halo 3.2e+00  |err| 2.5e-12  ok
+   21.5984494934+0.5029493476j  gamma 7.9e-10  halo 3.5e+00  |err| 1.5e-12  ok
+   23.5619449019+0.5029493476j  gamma 9.3e-10  halo 3.8e+00  |err| 5.0e-13  ok
+   25.5254403104+0.5029493476j  gamma 1.3e-09  halo 4.2e+00  |err| 6.8e-13  ok
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+
+== subsonic_fixed_fixed: 18 eigenvalues, 3617 solves, scan 8s, verify 5s, psa 8s
+   1.0562152530-0.0000000000j  gamma 1.4e-09  halo 4.7e-01  ok
+   3.1577280817-0.0000000000j  gamma 1.3e-09  halo 1.4e+00  ok
+   4.3379080230+0.0000000000j  gamma 1.2e-09  halo 2.0e+00  ok
+   5.7184760893+0.0000000000j  gamma 1.3e-09  halo 2.6e+00  ok
+   7.1752939084-0.0000000000j  gamma 1.5e-09  halo 3.3e+00  ok
+   8.5974715651+0.0000000000j  gamma 1.4e-09  halo 3.9e+00  ok
+   10.0190350354-0.0000000000j  gamma 1.5e-09  halo 4.6e+00  ok
+   11.4453136210+0.0000000000j  gamma 1.5e-09  halo 5.3e+00  ok
+   12.8722658439-0.0000000000j  gamma 1.5e-09  halo 5.9e+00  ok
+   14.2992921975+0.0000000000j  gamma 1.4e-09  halo 6.6e+00  ok
+   15.7266228080-0.0000000000j  gamma 1.8e-09  halo 7.3e+00  ok
+   17.1542036487+0.0000000000j  gamma 1.8e-09  halo 7.9e+00  ok
+   18.5819471546-0.0000000000j  gamma 1.6e-09  halo 8.6e+00  ok
+   20.0098151686+0.0000000000j  gamma 1.9e-09  halo 9.3e+00  ok
+   21.4377845129+0.0000000000j  gamma 1.7e-09  halo 9.9e+00  ok
+   22.8658355853+0.0000000000j  gamma 1.6e-09  halo 1.1e+01  ok
+   24.2939532410+0.0000000000j  gamma 1.4e-09  halo 1.1e+01  ok
+   25.7221260806+0.0000000000j  gamma 1.6e-09  halo 1.2e+01  ok
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+
+== subsonic_fixed_open: 18 eigenvalues, 3680 solves, scan 9s, verify 5s, psa 8s
+   0.6466159788+0.0388426398j  gamma 1.4e-09  halo 2.5e-01  ok
+   2.2316411280-0.2709062190j  gamma 2.2e-09  halo 9.3e-01  ok
+   3.6521361639-0.0271251896j  gamma 1.6e-09  halo 1.6e+00  ok
+   5.0441088629-0.0630489071j  gamma 1.4e-09  halo 2.3e+00  ok
+   6.4620437818-0.0910879158j  gamma 1.5e-09  halo 3.0e+00  ok
+   7.8822973486-0.0833276121j  gamma 1.4e-09  halo 3.7e+00  ok
+   9.3066756726-0.0813564730j  gamma 1.6e-09  halo 4.4e+00  ok
+   10.7323780465-0.0822797565j  gamma 1.6e-09  halo 5.0e+00  ok
+   12.1587429707-0.0824661307j  gamma 1.5e-09  halo 5.7e+00  ok
+   13.5856176575-0.0824001793j  gamma 1.5e-09  halo 6.4e+00  ok
+   15.0128516995-0.0824034130j  gamma 1.5e-09  halo 7.1e+00  ok
+   16.4403356882-0.0824228397j  gamma 1.6e-09  halo 7.8e+00  ok
+   17.8680056213-0.0824316249j  gamma 1.6e-09  halo 8.4e+00  ok
+   19.2958190350-0.0824368634j  gamma 1.6e-09  halo 9.1e+00  ok
+   20.7237449953-0.0824416040j  gamma 2.0e-09  halo 9.8e+00  ok
+   22.1517608305-0.0824455191j  gamma 1.7e-09  halo 1.0e+01  ok
+   23.5798496811-0.0824486307j  gamma 1.7e-09  halo 1.1e+01  ok
+   25.0079986876-0.0824511829j  gamma 1.8e-09  halo 1.2e+01  ok
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+
+== supersonic_fixed_fixed: 6 eigenvalues, 413 solves, scan 3s, verify 3s, psa 8s
+   3.4745563596-0.0000000000j  gamma 6.3e-09  halo 8.2e-01  ok
+   8.3967313659+0.0000000000j  gamma 5.2e-09  halo 1.4e+00  ok
+   12.5101959755-0.0000000000j  gamma 6.4e-09  halo 2.1e+00  ok
+   16.4890403611+0.0000000000j  gamma 6.1e-09  halo 2.8e+00  ok
+   20.5577868518+0.0000000000j  gamma 6.5e-09  halo 3.6e+00  ok
+   24.6826312189+0.0000000000j  gamma 6.8e-09  halo 4.3e+00  ok
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+
+== supersonic_fixed_open: 7 eigenvalues, 413 solves, scan 8s, verify 4s, psa 8s
+   0.0000000100+1.0135697240j  gamma 3.1e-08  halo 3.8e-01  CHECK
+   3.1050421235+0.5642853326j  gamma 4.6e-09  halo 5.2e-01  ok
+   8.4453746616+0.5158584749j  gamma 3.5e-09  halo 1.2e+00  ok
+   12.5913740500+0.6196329655j  gamma 4.6e-09  halo 1.5e+00  ok
+   16.5034537633+0.6716184162j  gamma 5.4e-09  halo 1.9e+00  ok
+   20.5435919070+0.6564234419j  gamma 5.3e-09  halo 2.4e+00  ok
+   24.6741849803+0.6408128068j  gamma 5.1e-09  halo 2.9e+00  ok
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: This process (pid=466945) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  warning: 1 estimate(s) did not polish (see ScanResult.polished)

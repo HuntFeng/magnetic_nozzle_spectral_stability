@@ -1,0 +1,399 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\graphicspath{{figures/}}
+\captionsetup{font=small,labelfont=bf}
+\hypersetup{colorlinks,linkcolor=blue!60!black,citecolor=blue!60!black,urlcolor=blue!60!black}
+
+\newcommand{\Real}{\operatorname{Re}}
+\newcommand{\Imag}{\operatorname{Im}}
+\newcommand{\infbeyn}{InfBeyn}
+
+\title{Spectral stability of non-transonic plasma flows in the magnetic nozzle,\\
+revisited with the infinite-dimensional Beyn method}
+\author{Hunt Feng}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The polynomial eigenvalue problem of the thesis \cite{feng2024} for plasma flow in a magnetic nozzle is
+solved again for the four non-transonic configurations (constant and spatially varying velocity, subsonic
+and supersonic, each with Dirichlet and fixed-open boundary conditions) using \infbeyn{}, the contour-integral
+method of Colbrook and Townsend \cite{colbrook2023} applied directly to the differential operator. The
+method returns every eigenvalue in a prescribed window of the complex plane, and each one is certified
+through the pseudospectral quantity $\gamma_n$. There are no spurious eigenvalues and no convergence test
+is required. The stability verdicts of the thesis are confirmed: both subsonic and supersonic flows are
+stable with Dirichlet boundaries, the supersonic flow is unstable with fixed-open boundaries, and the
+subsonic flow with a varying velocity profile has a single unstable ground mode with fixed-open boundaries.
+The new eigenvalues are compared with the thesis-era finite-difference, spectral-collocation and
+spectral-Galerkin results. For the constant-velocity problems \infbeyn{} agrees with the exact eigenvalues to
+$10^{-13}$. Finite differences on $N=101$ and $N=201$ points miss the eigenvalues by $10^{-3}$ to $10^{0}$
+and produce up to eight spurious eigenvalues in the window; collocation agrees with \infbeyn{} to
+$10^{-13}$ for constant velocity, to $10^{-11}$ for the varying profiles with Dirichlet boundaries and to
+$10^{-3}$ with fixed-open boundaries.
+\end{abstract}
+
+\section{Problem}
+
+The linearized flow equations of the thesis reduce to the quadratic eigenvalue problem (thesis Eq.~3.6)
+\begin{equation}
+  T(\omega)\tilde v \equiv
+  \omega^2 \tilde v + 2i\omega\left(v_0\tilde v' + v_0'\tilde v\right)
+  + \left[(1-v_0^2)\tilde v'' - \Big(3v_0+\frac1{v_0}\Big)v_0'\tilde v'
+  - \Big(1-\frac1{v_0^2}\Big)v_0'^2\tilde v - \Big(v_0+\frac1{v_0}\Big)v_0''\tilde v\right] = 0
+  \label{eq:nep}
+\end{equation}
+on $z\in[-1,1]$, with either Dirichlet boundaries $\tilde v(-1)=\tilde v(1)=0$ or fixed-open boundaries
+$\tilde v(-1)=\tilde v'(1)=0$. A mode grows in time when $\Imag\omega>0$.
+The equilibrium velocity is (thesis Eq.~2.33)
+\begin{equation}
+  v_0(z) = \left[-W_k\!\left(-\frac{B(z)^2}{B_m^2}v_m^2 e^{-v_m^2}\right)\right]^{1/2},\qquad
+  B(z) = B_0\left(1+R\,e^{-(z/\Delta)^2}\right),
+\end{equation}
+with $B_0=1$, $R=1.5$, $\Delta=1/3$, $B_m=B(0)$, and the Lambert branch $k=0$ for the subsonic profile
+($v_m=0.5$) and $k=-1$ for the supersonic profile ($v_m=1.5$). The derivatives $v_0'$, $v_0''$ are evaluated
+exactly from the equilibrium relation $(v_0^2-1)v_0' = -v_0B'/B$. The constant-velocity cases use
+$v_0\equiv v_m$. Figure~\ref{fig:v0} shows the four profiles.
+
+\begin{figure}[H]
+  \centering\includegraphics[width=0.6\textwidth]{velocity_profiles}
+  \caption{Equilibrium velocity profiles of the eight cases: constant ($v_0=0.5$, $1.5$) and spatially
+  varying ($v_m=0.5$, $1.5$ at the throat $z=0$).}
+  \label{fig:v0}
+\end{figure}
+
+For constant velocity the eigenvalues are known in closed form (thesis Eqs.~3.10 and 3.12):
+\begin{align}
+  \text{Dirichlet:}\quad &\omega_n = \frac{n\pi}{2}(1-v_0^2),\qquad n=\pm1,\pm2,\dots \label{eq:exactD}\\
+  \text{fixed-open:}\quad &\omega_n = (v_0^2-1)\left[\phi_n - \frac{i}{4}\ln\left|\frac{v_0-1}{v_0+1}\right|\right],
+  \qquad \phi_n = \begin{cases} n\pi/2, & v_0>1,\\ (2n+1)\pi/4, & v_0<1.\end{cases} \label{eq:exactFO}
+\end{align}
+Two remarks on Eq.~\eqref{eq:exactFO}. The condition $\tilde v'(1)=0$ gives
+$e^{-4i\omega/(v_0^2-1)} = (1+v_0)/(v_0-1)$; for $v_0<1$ the right-hand side is negative, so its logarithm
+carries an extra $i\pi$ and the real parts sit at half-integer multiples of $\pi(1-v_0^2)/2$. Thesis
+Eq.~(3.12) writes $n\pi/2$ for both signs, but the values plotted in thesis Fig.~3.2(a)
+($\Real\omega = -0.589, -1.767, \dots$) already correspond to the half-integer phases $\phi_n$ used here. Secondly,
+$n=0$ in Eq.~\eqref{eq:exactD} gives $\omega=0$ with $\tilde v\equiv0$ (thesis Eq.~3.9), so it is not an
+eigenvalue and is excluded.
+
+\section{Method}
+
+\infbeyn{} \cite{colbrook2023} is Beyn's contour method applied to the operator $T(\omega)$ itself. For a closed
+contour $\Gamma$ one forms the quasimatrices
+\begin{equation}
+  A_0 = \frac1{2\pi i}\oint_\Gamma T(z)^{-1}V\,dz,\qquad
+  A_1 = \frac1{2\pi i}\oint_\Gamma z\,T(z)^{-1}V\,dz,
+\end{equation}
+where $V$ is a set of random smooth test functions. Each $T(z)^{-1}V$ is a linear boundary value problem,
+solved by Chebyshev collocation with the number of points doubled until the Chebyshev coefficients of the
+solution have decayed below $10^{-12}$. The eigenvalues inside $\Gamma$ are those of the small matrix pencil
+obtained from the SVD of $A_0$. Only linear BVPs are ever discretized, each to its own tolerance, so there is
+no global discretization of the eigenvalue problem and hence no spectral pollution.
+
+The implementation (\texttt{inf\_beyn.py}) was used as follows for every case:
+\begin{itemize}
+  \item \texttt{scan()} over the window $\Real\omega\in[-0.5,26]$, $\Imag\omega\in[-3,3]$ by adaptive
+  rectangular subdivision (Clenshaw--Curtis rule with 33 nodes per edge, up to 7 levels, 24 test functions).
+  A tile is accepted only if the singular values of $A_0$ show a gap of at least $10^4$ and the nested
+  half rule reproduces the eigenvalues. Accepted estimates are polished by Newton's method on the bordered
+  system $[T(\omega)u;\,c^*u-1]=0$ on a grid doubled until convergence.
+  \item \texttt{verify()}: for each eigenvalue, $\gamma_n(\omega)=\min_u\|T(\omega)u\|/\|u\|$ over
+  polynomials of degree $n=64,128,256$ satisfying the boundary conditions. By Theorem~2.2 of
+  \cite{colbrook2023} $\omega$ lies in the $\gamma_n(\omega)$-pseudospectrum of $T$; a true, well-conditioned
+  eigenvalue has $\gamma_n(\omega)$ at rounding level and a much larger ``halo'' value of $\gamma_n$ on a
+  circle (radius $0.25$) around it.
+  \item \texttt{pseudospectra()}: $\gamma_{128}$ on a $265\times61$ grid of the window.
+\end{itemize}
+The old technique of the thesis is also rerun on the same operator: second-order central finite differences
+on $N=101$ and $N=201$ equispaced points, with $\tilde v'(1)=0$ imposed by a one-sided second-order stencil,
+linearized to a generalized eigenvalue problem (\texttt{nozzle\_infbeyn.py}, function
+\texttt{finite\_difference}). The spectral-collocation ($N=101$ Chebyshev points) and spectral-Galerkin
+(30 compact Legendre combinations) eigenvalues are taken unchanged from the thesis data files in
+\texttt{../data/}. These three contain all eigenvalues of the discretized problem, spurious ones included;
+the thesis removed the spurious ones by a convergence test. Here an old eigenvalue in the window farther than
+$0.1$ from every \infbeyn{} eigenvalue is counted as spurious.
+
+Running all eight cases takes about two and a half minutes on 12 cores (forked workers); the scans
+themselves take 2 to 9 seconds each (Table~\ref{tab:summary}).
+
+\section{Results}
+
+\begin{table}[H]
+  \centering\small
+  \input{tables/summary}
+  \caption{Summary of the \infbeyn{} scans. Eigenvalue counts are for the window $\Real\omega\in[-0.5,26]$,
+  $\Imag\omega\in[-3,3]$; the growth rate is the largest $\Imag\omega$ found and the mode that attains it.}
+  \label{tab:summary}
+\end{table}
+
+Every eigenvalue of every case passed the certification: $\gamma_{256}(\omega)\le 3\times10^{-8}$ (at
+the rounding floor of the computation) with a halo larger by seven to ten orders of magnitude, and the
+pseudospectral plots show no region of small $\gamma_n$ other than the isolated discs around the eigenvalues.
+No tile was left unresolved. The stability verdicts of the thesis are reproduced in all eight cases.
+
+\subsection{Constant velocity}
+
+\paragraph{Subsonic, $v_0=0.5$.} With Dirichlet boundaries the 22 eigenvalues in the window are real
+and equal to $n\pi(1-v_0^2)/2$ to within $10^{-13}$ (Fig.~\ref{fig:css}, Table~\ref{tab:css}). With fixed-open
+boundaries all 22 eigenvalues share the damping rate $\Imag\omega = -0.2060 = \frac{3}{16}\ln\frac13$
+(Fig.~\ref{fig:cso}, Table~\ref{tab:cso}); the flow is stable.
+
+\paragraph{Supersonic, $v_0=1.5$.} Dirichlet: 13 real eigenvalues $n\pi(v_0^2-1)/2$, stable
+(Fig.~\ref{fig:cSs}, Table~\ref{tab:cSs}). Fixed-open: 14 eigenvalues with the common growth rate
+$\Imag\omega = 0.50295 = \frac{5}{16}\ln 5$, including the purely imaginary $n=0$ mode; the flow is unstable
+(Fig.~\ref{fig:cSo}, Table~\ref{tab:cSo}). The $n=0$ eigenvalue is matched to $2\times10^{-11}$, the others
+to $10^{-12}$; its eigenfunction is the smoothest but the resolvent is largest there.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{constant_subsonic_fixed_fixed_spectrum}\\
+  \includegraphics[width=\textwidth]{constant_subsonic_fixed_fixed_eigenfunctions}
+  \caption{Constant $v_0=0.5$, Dirichlet. Top: \infbeyn{} eigenvalues (circles) on the pseudospectrum
+  $\log_{10}\gamma_{128}(\omega)$; crosses are the exact eigenvalues. Bottom: first three eigenfunctions
+  (Chebyshev series returned by the method, normalized so the largest value is 1).}
+  \label{fig:css}
+\end{figure}
+\begin{table}[H]\centering\footnotesize\input{tables/constant_subsonic_fixed_fixed_eigs}
+  \caption{Constant $v_0=0.5$, Dirichlet: first ten eigenvalues, certification and error.}\label{tab:css}\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{constant_subsonic_fixed_open_spectrum}\\
+  \includegraphics[width=\textwidth]{constant_subsonic_fixed_open_eigenfunctions}
+  \caption{Constant $v_0=0.5$, fixed-open.}
+  \label{fig:cso}
+\end{figure}
+\begin{table}[H]\centering\footnotesize\input{tables/constant_subsonic_fixed_open_eigs}
+  \caption{Constant $v_0=0.5$, fixed-open: first ten eigenvalues. The exact values are Eq.~\eqref{eq:exactFO}
+  with the half-integer phases.}\label{tab:cso}\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{constant_supersonic_fixed_fixed_spectrum}\\
+  \includegraphics[width=\textwidth]{constant_supersonic_fixed_fixed_eigenfunctions}
+  \caption{Constant $v_0=1.5$, Dirichlet.}
+  \label{fig:cSs}
+\end{figure}
+\begin{table}[H]\centering\footnotesize\input{tables/constant_supersonic_fixed_fixed_eigs}
+  \caption{Constant $v_0=1.5$, Dirichlet: first ten eigenvalues.}\label{tab:cSs}\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{constant_supersonic_fixed_open_spectrum}\\
+  \includegraphics[width=\textwidth]{constant_supersonic_fixed_open_eigenfunctions}
+  \caption{Constant $v_0=1.5$, fixed-open. All modes grow at the same rate $\Imag\omega=0.503$.}
+  \label{fig:cSo}
+\end{figure}
+\begin{table}[H]\centering\footnotesize\input{tables/constant_supersonic_fixed_open_eigs}
+  \caption{Constant $v_0=1.5$, fixed-open: first ten eigenvalues.}\label{tab:cSo}\end{table}
+
+\subsection{Spatially varying velocity}
+
+\paragraph{Subsonic, $v_m=0.5$.} Dirichlet: 18 real eigenvalues, the first being $\omega_1=1.0562$;
+the flow is stable (Fig.~\ref{fig:ss}, Table~\ref{tab:ss}). Fixed-open: the ground mode
+$\omega_1 = 0.64662 + 0.03884i$ is unstable, the second mode is strongly damped
+($\Imag\omega_2=-0.2709$), and all higher modes are damped with $\Imag\omega\to-0.0825$
+(Fig.~\ref{fig:so}, Table~\ref{tab:so}). This is exactly the ``stable except the ground mode'' picture of
+thesis Fig.~4.17; the growth rate of the ground mode is now certified rather than inferred from the agreement of
+two discretizations.
+
+\paragraph{Supersonic, $v_m=1.5$.} The spectrum is much sparser: the eigenvalues are spaced by about
+$4.1$ instead of $2.0$ for the constant profile, because the mean of $v_0^2-1$ over the nozzle is larger
+($v_0\approx2.2$ at the ends). Dirichlet: 6 real eigenvalues $3.4746, 8.3967, 12.5102, \dots$, stable
+(Fig.~\ref{fig:Ss}, Table~\ref{tab:Ss}). Fixed-open: 7 eigenvalues, all with $\Imag\omega$ between $0.52$
+and $1.01$; the purely imaginary mode $\omega_1=1.01357i$ has the largest growth rate (Fig.~\ref{fig:So},
+Table~\ref{tab:So}). The flow is unstable.
+
+The eigenvalue $\omega_1=1.01357i$ is the only one flagged ``not polished'': its eigenfunction (left panel of
+Fig.~\ref{fig:So}) needs more than 2000 Chebyshev coefficients to reach the $10^{-12}$ tail, so Newton's method
+stalls at the rounding floor with a residual real part of $10^{-8}$. An independent \infbeyn{} solve on a circle of
+radius $0.2$ around it returns $\omega = 1.0135697i$ with real part $2\times10^{-14}$ and a clean rank-one
+singular-value gap, and $\gamma_{256}(\omega)=3\times10^{-8}$ with halo $0.38$; the eigenvalue is genuine and
+accurate to about $10^{-7}$. Its real part vanishes for the same reason as in the constant case: the
+$\Real\omega=0$ mode is the non-oscillating one.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{subsonic_fixed_fixed_spectrum}\\
+  \includegraphics[width=\textwidth]{subsonic_fixed_fixed_eigenfunctions}
+  \caption{Varying profile, $v_m=0.5$, Dirichlet.}
+  \label{fig:ss}
+\end{figure}
+\begin{table}[H]\centering\footnotesize\input{tables/subsonic_fixed_fixed_eigs}
+  \caption{$v_m=0.5$, Dirichlet: first ten eigenvalues.}\label{tab:ss}\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{subsonic_fixed_open_spectrum}\\
+  \includegraphics[width=\textwidth]{subsonic_fixed_open_eigenfunctions}
+  \caption{Varying profile, $v_m=0.5$, fixed-open. Only the ground mode has $\Imag\omega>0$.}
+  \label{fig:so}
+\end{figure}
+\begin{table}[H]\centering\footnotesize\input{tables/subsonic_fixed_open_eigs}
+  \caption{$v_m=0.5$, fixed-open: first ten eigenvalues.}\label{tab:so}\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{supersonic_fixed_fixed_spectrum}\\
+  \includegraphics[width=\textwidth]{supersonic_fixed_fixed_eigenfunctions}
+  \caption{Varying profile, $v_m=1.5$, Dirichlet.}
+  \label{fig:Ss}
+\end{figure}
+\begin{table}[H]\centering\footnotesize\input{tables/supersonic_fixed_fixed_eigs}
+  \caption{$v_m=1.5$, Dirichlet: all six eigenvalues in the window.}\label{tab:Ss}\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{supersonic_fixed_open_spectrum}\\
+  \includegraphics[width=\textwidth]{supersonic_fixed_open_eigenfunctions}
+  \caption{Varying profile, $v_m=1.5$, fixed-open. Every mode is unstable.}
+  \label{fig:So}
+\end{figure}
+\begin{table}[H]\centering\footnotesize\input{tables/supersonic_fixed_open_eigs}
+  \caption{$v_m=1.5$, fixed-open: all seven eigenvalues in the window. See the text for the unpolished
+  first mode.}\label{tab:So}\end{table}
+
+\section{Comparison with the discretize-then-eig methods}
+
+Figures~\ref{fig:cmp1}--\ref{fig:cmp4} overlay, for each case, every eigenvalue of the finite-difference
+($N=101$, $201$), collocation and Galerkin discretizations that falls in the scanned window on the \infbeyn{}
+eigenvalues, with a zoom on the imaginary parts of the first modes. Figures~\ref{fig:err1}--\ref{fig:err2}
+show the distance from each \infbeyn{} eigenvalue to the nearest old eigenvalue, mode by mode, and for the
+constant-velocity cases the distance from \infbeyn{} to the exact value. Tables~\ref{tab:cmp1}--\ref{tab:cmp4}
+list the same distances and the number of spurious eigenvalues; Table~\ref{tab:spurious} collects the spurious
+counts.
+
+\begin{table}[H]
+  \centering\small
+  \input{tables/spurious}
+  \caption{Number of eigenvalues in the window $\Real\omega\in[-0.5,26]$, $\Imag\omega\in[-3,3]$ farther
+  than $0.1$ from every \infbeyn{} eigenvalue (spurious), per method.}
+  \label{tab:spurious}
+\end{table}
+
+\paragraph{Accuracy.} For the constant-velocity problems the exact solution settles the comparison:
+\infbeyn{} and collocation both reach $10^{-13}$ to $10^{-12}$ on every mode in the window. Galerkin with 30
+basis functions is as accurate for the first three modes and then loses one to two digits per mode
+(thesis Fig.~4.9, 4.13, 4.15), down to $10^{-1}$ by mode 8 for $v_0=1.5$. Finite differences are second
+order and their error grows like the square of the wavenumber: $10^{-3}$ on the first mode and $10^{-1}$ to
+$10^{0}$ by mode 7 at $N=101$, four times smaller at $N=201$, which is consistent with the dispersion
+analysis of thesis Sec.~4.4.1. For the varying profiles there is no exact solution, and \infbeyn{} is the most
+accurate of the four, so the distances in Tables~\ref{tab:cmp3}, \ref{tab:cmp4} are the errors of the old
+methods. Collocation at $N=101$ agrees with \infbeyn{} to $10^{-12}$--$10^{-10}$ with Dirichlet boundaries for both
+profiles, but only to $10^{-3}$ with fixed-open boundaries ($1.2\times10^{-3}$ on the first subsonic mode,
+$3.5\times10^{-3}$ on the first supersonic mode, $10^{-4}$ beyond). The loss is not a property of the collocation method but of the thesis-era script
+(\texttt{archive/run\_experiments.py}): for the fixed-open case it rewrites one row of the Chebyshev
+differentiation matrices in place to impose $\tilde v'(1)=0$, and then differentiates the equilibrium
+profile with the same, already modified, matrices, so $v_0'$ and $v_0''$ are wrong at the grid point next to
+$z=1$. Constant profiles (zero derivatives) and Dirichlet runs (no row rewriting) are unaffected, which is why
+those agree to $10^{-12}$. Repeating the computation with copies of the matrices reproduces the stored
+eigenvalues to $10^{-9}$ when the aliasing is kept and brings the collocation eigenvalues to within
+$5\times10^{-8}$ ($v_m=1.5$) and $10^{-9}$ ($v_m=0.5$) of the \infbeyn{} values when it is removed.
+The thesis statement that collocation and Galerkin
+``agree well on the first three modes and start to deviate afterwards'' for $v_m=1.5$ (thesis Figs.~4.18,
+4.19) is explained by Tables~\ref{tab:cmp4}: the collocation eigenvalues stay within $10^{-10}$ (Dirichlet)
+or $10^{-3}$ (fixed-open) of the certified ones for all modes, while the Galerkin ones drift to $10^{-2}$
+at mode 3 and to $10^{0}$ at mode 5. The Galerkin values, not the collocation ones, were the inaccurate ones.
+
+\paragraph{Spurious eigenvalues.} Every discretization produces eigenvalues that are not eigenvalues of
+the operator. Most of them have $|\Imag\omega|$ of order $10$ to $10^{3}$ and fall outside the window, but
+Table~\ref{tab:spurious} shows that several remain inside it: up to 8 for finite differences at $N=101$ and
+up to 6 for Galerkin, in every one of the eight cases. In the thesis they were removed by comparing two
+resolutions (Sec.~4.4.2). \infbeyn{} produces none, because every eigenvalue it returns is a pole of the
+resolvent inside a contour, confirmed by the rank gap, the nested quadrature rule, Newton polishing and
+$\gamma_n$. Collocation at $N=101$ shows no spurious eigenvalue in the window for any case, but its
+eigenvalues off the window (e.g.\ $\pm2245i$ for constant $v_0=1.5$) show that this is a property of the
+window rather than of the method.
+
+\paragraph{Completeness.} The scan also answers a question the old approach cannot: that there are no
+further eigenvalues in the window. The pseudospectral plots are uniformly light away from the eigenvalues
+(no hidden region of small $\gamma_n$), and the accepted tiles cover the entire window.
+
+\begin{figure}[H]\centering
+  \includegraphics[width=\textwidth]{constant_subsonic_fixed_fixed_comparison}\\
+  \includegraphics[width=\textwidth]{constant_subsonic_fixed_open_comparison}
+  \caption{Constant $v_0=0.5$: all eigenvalues of the old discretizations in the window, with
+  \infbeyn{} and exact values.}\label{fig:cmp1}\end{figure}
+\begin{figure}[H]\centering
+  \includegraphics[width=\textwidth]{constant_supersonic_fixed_fixed_comparison}\\
+  \includegraphics[width=\textwidth]{constant_supersonic_fixed_open_comparison}
+  \caption{Constant $v_0=1.5$.}\label{fig:cmp2}\end{figure}
+\begin{figure}[H]\centering
+  \includegraphics[width=\textwidth]{subsonic_fixed_fixed_comparison}\\
+  \includegraphics[width=\textwidth]{subsonic_fixed_open_comparison}
+  \caption{Varying profile, $v_m=0.5$.}\label{fig:cmp3}\end{figure}
+\begin{figure}[H]\centering
+  \includegraphics[width=\textwidth]{supersonic_fixed_fixed_comparison}\\
+  \includegraphics[width=\textwidth]{supersonic_fixed_open_comparison}
+  \caption{Varying profile, $v_m=1.5$.}\label{fig:cmp4}\end{figure}
+
+\begin{figure}[H]\centering
+  \includegraphics[width=0.49\textwidth]{constant_subsonic_fixed_fixed_errors}
+  \includegraphics[width=0.49\textwidth]{constant_subsonic_fixed_open_errors}\\
+  \includegraphics[width=0.49\textwidth]{constant_supersonic_fixed_fixed_errors}
+  \includegraphics[width=0.49\textwidth]{constant_supersonic_fixed_open_errors}
+  \caption{Constant velocity: distance from each \infbeyn{} eigenvalue to the nearest eigenvalue of each old
+  method (open markers) and to the exact eigenvalue (filled circles), by mode number.}\label{fig:err1}\end{figure}
+\begin{figure}[H]\centering
+  \includegraphics[width=0.49\textwidth]{subsonic_fixed_fixed_errors}
+  \includegraphics[width=0.49\textwidth]{subsonic_fixed_open_errors}\\
+  \includegraphics[width=0.49\textwidth]{supersonic_fixed_fixed_errors}
+  \includegraphics[width=0.49\textwidth]{supersonic_fixed_open_errors}
+  \caption{Varying profiles: distance from each \infbeyn{} eigenvalue to the nearest eigenvalue of each old
+  method.}\label{fig:err2}\end{figure}
+
+\begin{table}[H]\centering\footnotesize
+  \input{tables/constant_subsonic_fixed_fixed_compare}\quad\input{tables/constant_subsonic_fixed_open_compare}
+  \caption{Constant $v_0=0.5$, Dirichlet (left) and fixed-open (right): $|\omega_n^{\rm method}-\omega_n^{\rm InfBeyn}|$
+  for the first eight modes, number of old eigenvalues in the window and number of spurious ones.}\label{tab:cmp1}\end{table}
+\begin{table}[H]\centering\footnotesize
+  \input{tables/constant_supersonic_fixed_fixed_compare}\quad\input{tables/constant_supersonic_fixed_open_compare}
+  \caption{Constant $v_0=1.5$, Dirichlet (left) and fixed-open (right).}\label{tab:cmp2}\end{table}
+\begin{table}[H]\centering\footnotesize
+  \input{tables/subsonic_fixed_fixed_compare}\quad\input{tables/subsonic_fixed_open_compare}
+  \caption{Varying $v_m=0.5$, Dirichlet (left) and fixed-open (right).}\label{tab:cmp3}\end{table}
+\begin{table}[H]\centering\footnotesize
+  \input{tables/supersonic_fixed_fixed_compare}\quad\input{tables/supersonic_fixed_open_compare}
+  \caption{Varying $v_m=1.5$, Dirichlet (left) and fixed-open (right).}\label{tab:cmp4}\end{table}
+
+\section{Conclusions}
+
+\begin{itemize}
+  \item \infbeyn{} reproduces all stability verdicts of the thesis for the non-transonic flows, now with a
+  certificate for each eigenvalue and a guarantee that no eigenvalue in the window was missed. No
+  convergence test or spurious-mode filtering is needed.
+  \item For constant velocity the eigenvalues agree with the exact ones to $10^{-13}$ (to $10^{-11}$ for the
+  purely imaginary fixed-open supersonic mode). The thesis-era collocation is equally accurate there; finite
+  differences and Galerkin are not.
+  \item For the varying profiles the collocation results of the thesis are accurate to $10^{-10}$ with
+  Dirichlet and, because of an aliasing slip in the old script, only to $10^{-3}$ with fixed-open boundaries
+  (to $10^{-8}$ once the slip is removed); the disagreement between collocation and Galerkin above the third
+  mode reported in the thesis is due to the Galerkin values.
+  \item Thesis Eq.~(3.12) should read with phase $(2n+1)\pi/4$ for $v_0<1$; the figures of the thesis
+  already use the correct values.
+  \item Certified growth rates: $0.50295$ (constant $v_0=1.5$, fixed-open, all modes), $0.03884$ (varying
+  $v_m=0.5$, fixed-open, ground mode only) and $1.01357$ (varying $v_m=1.5$, fixed-open, $\Real\omega=0$ mode).
+\end{itemize}
+
+\paragraph{Reproduction.} From the repository root:
+\texttt{uv run python nontransonic\_flow/nozzle\_infbeyn.py} (about 2.5 minutes on 12 cores, writes
+\texttt{nontransonic\_flow/data/infbeyn\_*.npz}), then
+\texttt{uv run python nontransonic\_flow/make\_figures.py} and
+\texttt{tectonic nontransonic\_flow/report.tex}.
+
+\begin{thebibliography}{9}
+\bibitem{feng2024} H.~Feng, \emph{Spectral stability of plasma flows in the magnetic nozzle}, M.Sc.\ thesis,
+University of Saskatchewan, 2024.
+\bibitem{colbrook2023} M.~J.~Colbrook and A.~Townsend, \emph{Avoiding discretization issues for nonlinear
+eigenvalue problems}, arXiv:2305.01691, 2023.
+\end{thebibliography}
+
+\end{document}
