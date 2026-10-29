@@ -364,6 +364,66 @@ further eigenvalues in the window. The pseudospectral plots are uniformly light 
   \input{tables/supersonic_fixed_fixed_compare}\quad\input{tables/supersonic_fixed_open_compare}
   \caption{Varying $v_m=1.5$, Dirichlet (left) and fixed-open (right).}\label{tab:cmp4}\end{table}
 
+
+\section{Why only the ground mode of the subsonic fixed-open flow is unstable}
+
+The subsonic ($v_m=0.5$) fixed-open spectrum has one growing mode, $\omega_1 = 0.6466+0.0388i$, while every
+other mode is damped. Three computations (\texttt{investigate\_subsonic\_open.py}) explain this.
+
+\paragraph{Energy budget.} Multiplying Eq.~\eqref{eq:nep} by $\bar{\tilde v}$, integrating over $[-1,1]$
+and using $\tilde v(-1)=\tilde v'(1)=0$ gives $a\omega^2+b\omega+c=0$ with $a=\int|\tilde v|^2$ real. The
+imaginary part of this relation is
+\begin{equation}
+  \Imag\omega = -\frac{\Real\omega\, v_0(1)|\tilde v(1)|^2
+  + \Real\omega\int v_0'|\tilde v|^2
+  - \Imag\!\int (v_0+1/v_0)\,v_0'\,\bar{\tilde v}\tilde v'}{2\Real\omega\,a + \Real b},
+  \qquad \Real b = -2\Imag\!\int v_0\bar{\tilde v}\tilde v',
+  \label{eq:budget}
+\end{equation}
+where the three terms of the numerator are, in order, the radiation of energy through the open end (always
+damping, as it is the only term left for constant $v_0$ and gives $\Imag\omega=-0.206$ there), the work of the
+velocity gradient on the mode, and the convective coupling through $v_0'$. The denominator is positive for all
+modes. Evaluated with the certified eigenfunctions, Eq.~\eqref{eq:budget} reproduces every $\Imag\omega$ to
+$10^{-12}$. Figure~\ref{fig:budget} shows the three contributions. For the ground mode the radiation term is
+tiny ($-0.0003$ before dividing by the denominator) because $\Real\omega$ is small and the mode is nearly flat at
+the exit, while both gradient terms are positive ($+0.0005$ each); the mode gains energy from the flow
+gradient faster than it radiates it. For mode 2 all three terms are negative and large, and for every higher
+mode the radiation and coupling terms are negative and grow with $\Real\omega$, while the gradient term is small
+or negative. Figure~\ref{fig:modeshapes} shows why: $|\tilde v_1|^2$ is concentrated on the accelerating flank
+$z<0$ where $v_0'>0$, and is small at the exit, whereas $|\tilde v_2|^2$ straddles both flanks and is large at
+the open end.
+
+\paragraph{Continuation in the profile amplitude.} Following the six lowest modes with Chebyshev collocation
+($N=200$) as the mirror ratio $R$ is reduced from $1.5$ to $0$ with the throat velocity held at $v_m=0.5$
+(Fig.~\ref{fig:continuation}, left), all six converge to the constant-velocity values
+$\omega_n=(v_0^2-1)[(2n+1)\pi/4 - \tfrac{i}{4}\ln\tfrac13]$ with the common damping $-0.206$. As the bump
+grows the exit velocity $v_0(\pm1)$ falls (to $0.19$ at $R=1.5$), the radiation term, proportional to $v_0(1)$,
+weakens, and every mode becomes less damped; the limit $\Imag\omega\to-0.0825$ of the high modes is the
+constant-velocity damping rate evaluated at the exit velocity, $-0.088$. The ground mode is the one that in
+addition draws energy from $v_0'$, and it crosses $\Imag\omega=0$ at $R\approx0.74$. The instability is
+therefore a continuous deformation of the lowest damped mode of the uniform flow, not a new branch.
+
+\paragraph{Continuation in the throat Mach number.} At $R=1.5$ the ground mode is unstable for every
+$v_m$ from $0.1$ to $0.95$, with a growth rate increasing monotonically with $v_m$
+(Fig.~\ref{fig:continuation}, right); modes 2 and 3 stay damped. The result is therefore robust, not a
+coincidence of $v_m=0.5$.
+
+\begin{figure}[H]\centering
+  \includegraphics[width=0.8\textwidth]{subsonic_fixed_open_budget}
+  \caption{Energy budget, Eq.~\eqref{eq:budget}: the three contributions to $\Imag\omega$ for the first
+  eight modes of the $v_m=0.5$ fixed-open flow. Their sum (dots) equals the computed growth rate.}
+  \label{fig:budget}\end{figure}
+\begin{figure}[H]\centering
+  \includegraphics[width=\textwidth]{subsonic_fixed_open_modeshapes}
+  \caption{$|\tilde v|^2$ of the first two modes against the velocity gradient $v_0'$. The unstable ground
+  mode lives on the accelerating flank and is small at the open end.}
+  \label{fig:modeshapes}\end{figure}
+\begin{figure}[H]\centering
+  \includegraphics[width=\textwidth]{subsonic_fixed_open_continuation}
+  \caption{Growth rates of the six lowest modes as the profile amplitude $R$ (left, $v_m=0.5$) and the throat
+  Mach number $v_m$ (right, $R=1.5$) are varied.}
+  \label{fig:continuation}\end{figure}
+
 \section{Conclusions}
 
 \begin{itemize}

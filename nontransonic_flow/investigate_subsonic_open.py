@@ -82,20 +82,31 @@ def problem(vm):
     return T, lambda cb: np.vstack([cb.D1[0], cb.I[-1]])
 
 
-def track(eigs, funcs, param_values, set_param):
-    """Follow each eigenpair by Newton polishing as a parameter is varied. set_param(p) -> (T, bc)."""
-    paths = np.full((len(param_values), len(eigs)), np.nan + 0j)
-    cur = list(zip(eigs, funcs))
+def collocation_eigs(vm, N=200):
+    """All eigenvalues of the fixed-open problem by Chebyshev collocation on N+1 points (R read from nz.R)."""
+    cb = Cheb(N)
+    v0, dv0, d2v0 = nz.velocity_profile(cb.x, vm, False)
+    A1 = 2j * (v0[:, None] * cb.D1 + np.diag(dv0))
+    A0 = ((1 - v0**2)[:, None] * cb.D2 - ((3 * v0 + 1 / v0) * dv0)[:, None] * cb.D1
+          - np.diag((1 - 1 / v0**2) * dv0**2 + (v0 + 1 / v0) * d2v0))
+    # eliminate u(x0 = 1) with u'(1) = 0 and drop x[-1] = -1 where u = 0
+    E = np.zeros((N + 1, N - 1), dtype=complex)
+    E[1:-1] = np.eye(N - 1)
+    E[0] = -cb.D1[0, 1:-1] / cb.D1[0, 0]
+    P = np.eye(N + 1)[1:-1]
+    w, _ = nz.polyeig(P @ A0 @ E, P @ A1 @ E, P @ np.eye(N + 1) @ E)
+    return w
+
+
+def track(eigs, param_values, set_param):
+    """Follow each eigenvalue as a parameter is varied: nearest collocation eigenvalue at each step."""
+    paths = np.zeros((len(param_values), len(eigs)), dtype=complex)
+    cur = np.array(eigs, dtype=complex)
     for i, p in enumerate(param_values):
-        T, bc = set_param(p)
-        s = InfBeyn(n_max=4096)
-        s.set_problem(T, bc)
-        new = []
-        for lam, u in cur:
-            lam2, u2, ok = s.polish(lam, u, max_move=0.5)
-            new.append((lam2, u2))
-            paths[i, len(new) - 1] = lam2 if ok else np.nan
-        cur = new
+        vm = set_param(p)
+        w = collocation_eigs(vm)
+        cur = np.array([w[np.argmin(np.abs(w - lam))] for lam in cur])
+        paths[i] = cur
     return paths
 
 
@@ -154,10 +165,11 @@ if __name__ == "__main__":
     R_values = np.linspace(1.5, 0.0, 61)
     def set_R(R):
         nz.R = R
-        return problem(0.5)
+        nz.BM = nz.B0 * (1 + R)  # keep the throat velocity at v_m = 0.5 while the bump shrinks
+        return 0.5
 
-    paths_R = track(lam[:n_track], [F[:, k] for k in range(n_track)], R_values, set_R)
-    nz.R = 1.5
+    paths_R = track(lam[:n_track], R_values, set_R)
+    nz.R, nz.BM = 1.5, 2.5
     exact0 = nz.exact_eigenvalues("constant_subsonic_fixed_open")
     print("\ncontinuation in R (mirror ratio): eigenvalues at R = 0 vs exact constant-velocity values")
     for k in range(n_track):
@@ -173,7 +185,7 @@ if __name__ == "__main__":
     vm_values = np.concatenate([np.linspace(0.5, 0.95, 46), np.linspace(0.5, 0.1, 41)[1:]])
     paths_vm = np.full((len(vm_values), n_track), np.nan + 0j)
     for idxs in (np.arange(46), np.arange(46, len(vm_values))):  # upward and downward from 0.5
-        paths_vm[idxs] = track(lam[:n_track], [F[:, k] for k in range(n_track)], vm_values[idxs], problem)
+        paths_vm[idxs] = track(lam[:n_track], vm_values[idxs], lambda v: v)
     vm_sorted = np.argsort(vm_values)
     print("\ncontinuation in v_m (throat Mach), R = 1.5: Im w of modes 1-3")
     for i in vm_sorted[::5]:

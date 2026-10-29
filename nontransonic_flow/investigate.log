@@ -1,0 +1,57 @@
+energy budget, subsonic v_m = 0.5, fixed-open (numerator terms of Im w; negative = damping)
+ n                  omega    resid   boundary   gradient   coupling     denom  Im w (budget)      Im w
+ 1    0.64662+0.03884i  6.1e-12    -0.0003     0.0005     0.0005    0.0186        0.03884   0.03884
+ 2    2.23164-0.27091i  5.6e-12    -0.0034    -0.0036    -0.0043    0.0422       -0.27091  -0.27091
+ 3    3.65214-0.02713i  2.9e-12    -0.0013     0.0017    -0.0016    0.0440       -0.02713  -0.02713
+ 4    5.04411-0.06305i  5.7e-12    -0.0022    -0.0011    -0.0004    0.0587       -0.06305  -0.06305
+ 5    6.46204-0.09109i  1.4e-12    -0.0031    -0.0001    -0.0036    0.0737       -0.09109  -0.09109
+ 6    7.88230-0.08333i  5.5e-13    -0.0037    -0.0005    -0.0034    0.0903       -0.08333  -0.08333
+ 7    9.30668-0.08136i  7.2e-13    -0.0043    -0.0004    -0.0040    0.1067       -0.08136  -0.08136
+ 8   10.73238-0.08228i  3.0e-13    -0.0050    -0.0005    -0.0046    0.1231       -0.08228  -0.08228
+    step 1/16 p=1.500 lam=0.64662+0.03884j ok
+    step 1/16 p=1.500 lam=2.23164-0.27091j ok
+    step 2/16 p=1.400 lam=2.23711-0.26475j ok
+    step 1/16 p=1.500 lam=7.88230-0.08333j ok
+    step 1/16 p=1.500 lam=6.46204-0.09109j ok
+    step 2/16 p=1.400 lam=0.65864+0.03301j ok
+    step 1/16 p=1.500 lam=3.65214-0.02713j ok
+    step 1/16 p=1.500 lam=5.04411-0.06305j ok
+    step 3/16 p=1.300 lam=2.24170-0.25789j FAILED
+    step 2/16 p=1.400 lam=6.50687-0.09141j ok
+    step 2/16 p=1.400 lam=3.67229-0.02634j ok
+    step 2/16 p=1.400 lam=7.93857-0.08346j ok
+    step 3/16 p=1.300 lam=0.67001+0.02696j FAILED
+    step 2/16 p=1.400 lam=5.07788-0.06717j ok
+    step 4/16 p=1.200 lam=2.24558-0.25032j FAILED
+    step 3/16 p=1.300 lam=6.54702-0.09152j FAILED
+    step 4/16 p=1.200 lam=0.68077+0.02065j FAILED
+    step 3/16 p=1.300 lam=7.98910-0.08362j FAILED
+    step 3/16 p=1.300 lam=3.68961-0.02617j FAILED
+    step 3/16 p=1.300 lam=5.10800-0.07099j FAILED
+    step 5/16 p=1.100 lam=2.24892-0.24203j FAILED
+    step 4/16 p=1.200 lam=6.58321-0.09146j FAILED
+    step 5/16 p=1.100 lam=0.69098+0.01406j FAILED
+    step 4/16 p=1.200 lam=3.70455-0.02656j FAILED
+    step 4/16 p=1.200 lam=8.03475-0.08380j FAILED
+    step 6/16 p=1.000 lam=2.25183-0.23299j FAILED
+    step 4/16 p=1.200 lam=5.13500-0.07452j FAILED
+    step 5/16 p=1.100 lam=6.61601-0.09126j FAILED
+    step 5/16 p=1.100 lam=3.71750-0.02752j FAILED
+    step 6/16 p=1.000 lam=0.70066+0.00714j FAILED
+    step 5/16 p=1.100 lam=8.07621-0.08401j FAILED
+    step 7/16 p=0.900 lam=2.25444-0.22317j FAILED
+    step 5/16 p=1.100 lam=5.15930-0.07778j FAILED
+    step 6/16 p=1.000 lam=6.64586-0.09094j FAILED
+    step 6/16 p=1.000 lam=3.72876-0.02904j FAILED
+    step 7/16 p=0.900 lam=0.70982-0.00013j FAILED
+    step 6/16 p=1.000 lam=8.11403-0.08426j FAILED
+    step 8/16 p=0.800 lam=2.25685-0.21253j FAILED
+    step 6/16 p=1.000 lam=5.18127-0.08076j FAILED
+    step 7/16 p=0.900 lam=6.67311-0.09053j FAILED
+    step 7/16 p=0.900 lam=3.73860-0.03115j FAILED
+    step 8/16 p=0.800 lam=0.71844-0.00778j FAILED
+    step 7/16 p=0.900 lam=8.14863-0.08453j FAILED
+    step 9/16 p=0.700 lam=2.25916-0.20099j FAILED
+    step 8/16 p=0.800 lam=6.69808-0.09006j FAILED
+    step 7/16 p=0.900 lam=5.20116-0.08345j FAILED
+    step 8/16 p=0.800 lam=3.74725-0.03387j FAILED
