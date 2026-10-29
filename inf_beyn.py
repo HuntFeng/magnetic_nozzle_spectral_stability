@@ -10,7 +10,9 @@
 # Chebyshev coefficients on [-1, 1].
 import os
 import warnings
+import traceback
 import multiprocessing
+from dataclasses import dataclass, field
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 import scipy.linalg as la
@@ -131,15 +133,7 @@ class InfBeyn:
     def _solve(self, nodes: NDArray, weights: NDArray, V: NDArray):
         """solve() on an explicit contour with explicit test functions V (no shared state)."""
         A0, A1, scale = self._compute_quasimatrices(V, nodes, weights)
-
-        # economized SVD of the quasimatrix A0 in L2(-1, 1):
-        # sample on a Gauss-Legendre grid, sqrt(w) makes the l2 product the L2 product
-        nq = A0.shape[0] + 1
-        xq, wq = leggauss(nq)
-        sw = np.sqrt(wq)[:, None]
-        A0q = sw * chebval(xq, A0).T
-        A1q = sw * chebval(xq, A1).T
-        U, s, Vh = la.svd(A0q, full_matrices=False)
+        U, s, Vh, A1q = self._moments_svd(A0, A1)
 
         m = int(np.sum(s > self.rank_tol * scale))  # numerical rank = number of eigenvalues
         self.singular_values = s / scale
@@ -147,18 +141,40 @@ class InfBeyn:
             return np.array([], dtype=complex), np.zeros((A0.shape[0], 0), dtype=complex)
         if m >= len(s):
             warnings.warn("A0 has full rank: increase n_func or shrink the contour")
-        Um = U[:, :m]
-        Sm = np.diag(s[:m])
-        V0 = Vh[:m, :].conj().T
-
-        # U^* A1 V0 x = lambda Sigma0 x
-        eigvals, X = la.eig(Um.conj().T @ A1q @ V0, Sm)
-        # eigenfunctions u = U Sigma0 x = A0 V0 x
-        eigfuncs = A0 @ V0 @ X
+        elif s[m - 1] < 1e4 * s[m]:
+            warnings.warn(
+                f"no clear gap in the singular values of A0 (s[{m - 1}]/s[{m}] = {s[m - 1] / s[m]:.1e}): "
+                "the eigenvalue count is unreliable, shrink the contour or use scan()"
+            )
+        eigvals, eigfuncs = self._beyn_eig(A0, U, s, Vh, A1q, m)
 
         # eigenvalues outside the contour cannot come from Keldysh's expansion
         inside = self._inside_contour(eigvals, nodes)
         return eigvals[inside], eigfuncs[:, inside]
+
+    @staticmethod
+    def _moments_svd(A0: NDArray, A1: NDArray):
+        """
+        Economized SVD of the quasimatrix A0 in L2(-1, 1): sample on a Gauss-Legendre
+        grid, sqrt(w) makes the l2 product the L2 product. Also returns A1 on that grid.
+        """
+        nq = A0.shape[0] + 1
+        xq, wq = leggauss(nq)
+        sw = np.sqrt(wq)[:, None]
+        A0q = sw * chebval(xq, A0).T
+        A1q = sw * chebval(xq, A1).T
+        U, s, Vh = la.svd(A0q, full_matrices=False)
+        return U, s, Vh, A1q
+
+    @staticmethod
+    def _beyn_eig(A0: NDArray, U: NDArray, s: NDArray, Vh: NDArray, A1q: NDArray, m: int):
+        """Beyn's reduced eigenproblem for rank m: eigenvalues and eigenfunctions (Chebyshev coefficients)."""
+        Um = U[:, :m]
+        V0 = Vh[:m, :].conj().T
+        # U^* A1 V0 x = lambda Sigma0 x
+        eigvals, X = la.eig(Um.conj().T @ A1q @ V0, np.diag(s[:m]))
+        # eigenfunctions u = U Sigma0 x = A0 V0 x
+        return eigvals, A0 @ V0 @ X
 
     @staticmethod
     def _inside_contour(z: NDArray, nodes: NDArray) -> NDArray:
@@ -196,6 +212,265 @@ class InfBeyn:
             initargs=(self,),
         ) as pool:
             return list(pool.map(_refine_one, tasks))
+
+    def scan(
+        self,
+        region: tuple[float, float, float, float],
+        n_edge: int = 32,
+        max_depth: int = 6,
+        gap_tol: float = 1e4,
+        noise_tol: float = 1e-11,
+        quad_tol: float = 1e-4,
+        max_rank: int | None = None,
+        backend: str = "auto",
+        n_workers: int | None = None,
+        comm=None,
+        verbose: bool = False,
+    ) -> "ScanResult":
+        """
+        All eigenvalues in the rectangle region = (re_min, re_max, im_min, im_max),
+        by adaptive subdivision into rectangular tiles. Each tile runs InfBeyn on its
+        boundary and is accepted only if
+          - the singular values of A0 have a clear gap (s_m / s_{m+1} >= gap_tol,
+            s_m > noise_tol relative to the resolvent scale): the count m is unambiguous,
+          - m <= max_rank (default n_func // 2): enough random probes to spare,
+          - the eigenvalues agree with those of the nested half rule (every other
+            node, no extra solves) to quad_tol * tile size: the quadrature has converged,
+          - every BVP solve on its boundary is resolved.
+        Otherwise the tile is split into four, with cut lines moved away from the
+        eigenvalue estimates. Tiles failing at max_depth are returned as unresolved
+        (e.g. accumulating eigenvalues or continuous spectrum: inspect with pseudospectra()).
+
+        The region actually scanned is enlarged by ~1.5% (unevenly) on every side, and
+        the eigenvalues are then clipped back to region: a pole on a tile's edge spoils
+        the quadrature however much the tile is refined, and the edges of region are
+        often placed on such lines (e.g. Im = 0 when looking for unstable modes).
+
+        Each edge uses Clenshaw-Curtis with n_edge + 1 nodes, and every BVP solve
+        T(z)^{-1}V is cached: neighbouring tiles share their common edges. The
+        accepted eigenvalues are polished by Newton's method (see polish()).
+
+        All new BVP solves of one subdivision level, and all polishing steps, run in
+        parallel on the chosen backend:
+            "serial": this process
+            "fork":   n_workers forked processes on this machine (default: one per CPU)
+            "mpi":    all ranks of comm (default MPI.COMM_WORLD). SPMD: every rank runs
+                      the same script and calls scan() with the same arguments; rank 0
+                      drives the subdivision, the others only solve. Every rank gets
+                      the result. Run with e.g. `mpiexec -n 64 python script.py`.
+            "auto":   "mpi" if launched by an MPI launcher with more than one rank,
+                      otherwise "fork" (or "serial" if n_workers == 1)
+
+        Input:
+            region: (re_min, re_max, im_min, im_max)
+            n_edge: Clenshaw-Curtis degree on each edge (even)
+            max_depth: maximum number of subdivisions of the initial tiles
+            verbose: print the progress of each subdivision level (rank 0)
+        Output:
+            ScanResult (eigenvalues, eigenfunctions, accepted and unresolved tiles)
+        """
+        if n_edge % 2:
+            raise ValueError("n_edge must be even (nested half rule)")
+        ex = _make_backend(backend, self, n_workers, comm)
+        result = None
+        with ex:
+            if ex.worker:
+                ex.serve()
+            else:
+                result = self._scan(ex, region, n_edge, max_depth, gap_tol, noise_tol, quad_tol, max_rank, verbose)
+        return ex.share(result)
+
+    def _scan(self, ex, region, n_edge, max_depth, gap_tol, noise_tol, quad_tol, max_rank, verbose) -> "ScanResult":
+        x0, x1, y0, y1 = map(float, region)
+        V = self._generate_random_test_functions(self.n_func)
+        pad = 0.015 * max(x1 - x0, y1 - y0)
+        X0, X1, Y0, Y1 = x0 - 0.93 * pad, x1 + 1.07 * pad, y0 - 1.11 * pad, y1 + 0.97 * pad
+        max_rank = max_rank or self.n_func // 2
+        full, half = self._cheb(n_edge), self._cheb(n_edge // 2)
+
+        # initial tiles as close to square as possible (thin tiles need more nodes)
+        nx = max(1, round((X1 - X0) / (Y1 - Y0)))
+        ny = max(1, round((Y1 - Y0) / (X1 - X0)))
+        xs, ys = np.linspace(X0, X1, nx + 1), np.linspace(Y0, Y1, ny + 1)
+        pending = [Tile(xs[i], xs[i + 1], ys[j], ys[j + 1]) for i in range(nx) for j in range(ny)]
+
+        solutions: dict[complex, tuple[NDArray, bool]] = {}  # z -> T(z)^{-1}V, resolved
+        segments: dict[tuple[complex, complex], tuple] = {}  # edge -> its integrals
+        accepted, unresolved = [], []
+        level = 0
+        while pending:
+            new_segs = {_segment(p, q)[0] for t in pending for p, q in t.edges()} - segments.keys()
+            new_nodes = sorted(
+                {z for key in new_segs for z in _segment_nodes(*key, full)[0]} - solutions.keys(),
+                key=lambda z: (z.real, z.imag),
+            )
+            solutions.update(zip(new_nodes, ex.map(_task_bvp, new_nodes, V)))
+            for key in new_segs:
+                segments[key] = self._segment_integrals(key, full, half, solutions)
+
+            nxt = []
+            for t in pending:
+                self._assess(t, segments, gap_tol, noise_tol, quad_tol, max_rank)
+                if not t.reason:
+                    accepted.append(t)
+                elif t.depth >= max_depth or t.reason == "unresolved BVP":
+                    unresolved.append(t)
+                else:
+                    nxt += t.split()
+            if verbose:
+                print(
+                    f"scan level {level}: {len(pending)} tiles, {len(new_nodes)} new solves, "
+                    f"{len(accepted)} accepted, {len(unresolved)} unresolved, {len(nxt)} to split",
+                    flush=True,
+                )
+            pending = nxt
+            level += 1
+
+        # polish every estimate; allow it to move at most a tenth of its tile
+        tasks = [(lam, u, 0.1 * t.size) for t in accepted for lam, u in zip(t.eigvals, t.eigfuncs.T)]
+        polished = ex.map(_task_polish, tasks)
+        estimates = np.array([lam for lam, _, _ in tasks], dtype=complex)
+        eigvals = np.array([lam for lam, _, _ in polished], dtype=complex)
+        ok = np.array([o for _, _, o in polished], dtype=bool)
+        eigfuncs = [c for _, c, _ in polished]
+
+        # merge duplicates (the same eigenvalue seen from both sides of an edge); two
+        # distant estimates converging to the same eigenvalue means one of them was wrong
+        keep = np.ones(len(eigvals), bool)
+        for a in range(len(eigvals)):
+            for b in range(a):
+                if keep[b] and abs(eigvals[a] - eigvals[b]) <= 1e-8 * max(1, abs(eigvals[a])):
+                    if abs(estimates[a] - estimates[b]) > 0.01 * tasks[a][2]:
+                        warnings.warn(f"estimates {estimates[a]:.6g} and {estimates[b]:.6g} polish to the same eigenvalue")
+                    keep[a] = False
+                    break
+        tol = 1e-8 * max(x1 - x0, y1 - y0)
+        keep &= (x0 - tol <= eigvals.real) & (eigvals.real <= x1 + tol) & (y0 - tol <= eigvals.imag) & (eigvals.imag <= y1 + tol)
+        if not np.all(ok):
+            warnings.warn(f"{np.sum(~ok)} estimate(s) did not polish (see ScanResult.polished)")
+        if unresolved:
+            warnings.warn(f"{len(unresolved)} tile(s) unresolved at max_depth (see ScanResult.unresolved)")
+        return ScanResult(
+            eigvals=eigvals[keep],
+            eigfuncs=[c for c, k in zip(eigfuncs, keep) if k],
+            polished=ok[keep],
+            estimates=estimates[keep],
+            tiles=accepted,
+            unresolved=unresolved,
+            n_solves=len(solutions),
+        )
+
+    def _segment_integrals(self, key, full: Cheb, half: Cheb, solutions: dict) -> tuple:
+        """
+        Integrals of T(z)^{-1}V and z T(z)^{-1}V along the edge a -> b, with the
+        Clenshaw-Curtis rule and with its nested half rule (every other node).
+        Also the largest ||T(z)^{-1}V|| on the edge and whether all solves are resolved.
+        """
+        z, w = _segment_nodes(*key, full)
+        wh = (key[1] - key[0]) / 2 * half.w
+        sols = [solutions[zk] for zk in z]
+        n = max(c.shape[0] for c, _ in sols)
+        I = np.zeros((4, n, self.n_func), dtype=complex)  # I0, I1, half-rule I0, I1
+        for k, (zk, (c, _)) in enumerate(zip(z, sols)):
+            I[0, : c.shape[0]] += w[k] * c
+            I[1, : c.shape[0]] += w[k] * zk * c
+            if k % 2 == 0:
+                I[2, : c.shape[0]] += wh[k // 2] * c
+                I[3, : c.shape[0]] += wh[k // 2] * zk * c
+        norm = max(la.norm(c) for c, _ in sols)
+        return I, norm, all(r for _, r in sols)
+
+    def _assess(self, t: "Tile", segments: dict, gap_tol, noise_tol, quad_tol, max_rank) -> None:
+        """Beyn on the boundary of tile t; fills its estimates and diagnostics, t.reason = "" if accepted."""
+        parts = [(segments[key], sign) for key, sign in (_segment(p, q) for p, q in t.edges())]
+        if not all(ok for (_, _, ok), _ in parts):
+            t.reason = "unresolved BVP"
+            return
+        n = max(I.shape[1] for (I, _, _), _ in parts)
+        A = np.zeros((4, n, self.n_func), dtype=complex)
+        for (I, _, _), sign in parts:
+            A[:, : I.shape[1]] += sign * I
+        A /= 2j * np.pi
+        scale = max(norm for (_, norm, _), _ in parts) * t.perimeter / (2 * np.pi)
+
+        U, s, Vh, A1q = self._moments_svd(A[0], A[1])
+        t.singular_values = s / scale
+        t.rank, t.gap = _gap_rank(t.singular_values, noise_tol)
+        if t.rank == 0:
+            return
+        if t.gap < gap_tol:
+            t.reason = "no rank gap"
+            return
+        if t.rank > max_rank:
+            t.reason = "rank too large"
+            return
+
+        lam, F = self._beyn_eig(A[0], U, s, Vh, A1q, t.rank)
+        lam_half, _ = self._beyn_eig(A[2], *self._moments_svd(A[2], A[3]), t.rank)
+        # keep estimates slightly outside too: an eigenvalue on a shared edge may land
+        # just outside both tiles; the duplicates are merged after polishing
+        inside = t.contains(lam, pad=1e-3)
+        t.eigvals, t.eigfuncs = lam[inside], F[:, inside]
+        # compare the eigenvalues in and around the tile; leakage from far outside is irrelevant
+        near = lam[t.contains(lam, pad=0.1)]
+        if len(near):
+            t.quad_err = np.max(np.min(np.abs(near[:, None] - lam_half[None, :]), axis=1)) / t.size
+        if t.quad_err > quad_tol:
+            t.reason = "quadrature"
+
+    def polish(self, lam: complex, u: NDArray, max_move: float = np.inf, maxit: int = 30):
+        """
+        Newton's method on [T(lam)u; c^*u - 1] = 0 from an InfBeyn estimate (lam, u),
+        on a Chebyshev grid doubled until lam is converged and u is resolved. A local
+        discretization is safe here because InfBeyn has already located a true eigenvalue.
+
+        Input:
+            lam, u: eigenvalue estimate and Chebyshev coefficients of its eigenfunction
+            max_move: the result is flagged as failed if it lands farther than this from lam
+        Output:
+            eigenvalue, Chebyshev coefficients of the eigenfunction, success flag
+        """
+        lam0 = lam
+        N = self.n_min
+        while N < len(u) - 1:
+            N *= 2
+        prev = None
+        while N <= self.n_max:
+            cheb = self._cheb(N)
+            lam, vals = self._newton(lam, chebval(cheb.x, u), cheb, maxit)
+            u = Cheb.vals2coeffs(vals)
+            if prev is not None and abs(lam - prev) <= 1e-10 * max(1, abs(lam)) and np.all(self._resolved(u)):
+                return lam, u, bool(abs(lam - lam0) <= max_move)
+            prev = lam
+            N *= 2
+        return lam, u, False
+
+    def _newton(self, lam: complex, u: NDArray, cheb: Cheb, maxit: int):
+        """Newton on the collocated bordered system at fixed N. u: values on cheb.x."""
+        u = u / la.norm(u)
+        c = u.conj()  # normalization c^T u = 1
+        n = len(u)
+        J = np.zeros((n + 1, n + 1), dtype=complex)
+        J[n, :n] = c
+        step_prev = np.inf
+        for _ in range(maxit):
+            h = 1e-3 * max(1, abs(lam))
+            T = lambda z: np.asarray(self.T(z, cheb), dtype=complex)
+            dT = (8 * (T(lam + h) - T(lam - h)) - (T(lam + 2 * h) - T(lam - 2 * h))) / (12 * h)
+            dT[[0, -1], :] = 0  # BCs do not depend on lam
+            Tz = self._bvp_matrix(lam, cheb)
+            J[:n, :n] = Tz
+            J[:n, n] = dT @ u
+            r = np.concatenate([Tz @ u, [c @ u - 1]])
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", la.LinAlgWarning)
+                d = la.solve(J, -r)
+            u, lam = u + d[:n], lam + d[n]
+            step = abs(d[n])
+            if step <= 1e-14 * max(1, abs(lam)) or step > 0.5 * step_prev:  # converged or stagnating
+                break
+            step_prev = step
+        return lam, u
 
     def pseudospectra(
         self, z: NDArray, n: int = 64, n_range: int | None = None, n_workers: int | None = None
@@ -385,7 +660,17 @@ class InfBeyn:
         coeffs = self.rng.normal(size=(M + 1, n_func)) * std[:, None]
         return coeffs
 
-    def _solve_bvp(self, z: complex, V: NDArray):
+    def _bvp_matrix(self, z: complex, cheb: Cheb) -> NDArray:
+        """Collocation matrix of T(z) with the first and last rows replaced by the BCs."""
+        T = np.array(self.T(z, cheb), dtype=complex)
+        T[[0, -1], :] = self.bc(cheb)
+        return T
+
+    def _resolved(self, c: NDArray) -> NDArray:
+        """Per column: Chebyshev tail below tol relative to the largest coefficient."""
+        return np.abs(c[-8:]).max(axis=0) <= self.tol * np.abs(c).max(axis=0)
+
+    def _solve_bvp(self, z: complex, V: NDArray) -> tuple[NDArray, bool]:
         """
         Adaptively solve T(z)U = V with homogeneous BCs. Double N until the
         Chebyshev coefficients of every column have decayed below tol.
@@ -393,26 +678,25 @@ class InfBeyn:
         Input:
             V: Chebyshev coefficients of the right-hand sides
         Output:
-            Chebyshev coefficients of the solutions
+            Chebyshev coefficients of the solutions, and whether they are resolved
         """
         N = self.n_min
         while True:
             cheb = self._cheb(N)
-            T = np.array(self.T(z, cheb), dtype=complex)
+            T = self._bvp_matrix(z, cheb)
             rhs = chebval(cheb.x, V).T.astype(complex)
-            T[[0, -1], :] = self.bc(cheb)
             rhs[[0, -1], :] = 0
             with warnings.catch_warnings():
                 # collocation matrices are badly row-scaled (O(N^4) vs O(1) BC rows)
                 warnings.simplefilter("ignore", la.LinAlgWarning)
                 U = la.solve(T, rhs)
             c = Cheb.vals2coeffs(U)
-            tail = np.abs(c[-8:]).max(axis=0)
-            if np.all(tail <= self.tol * np.abs(c).max(axis=0)):
-                return c
+            if np.all(self._resolved(c)):
+                return c, True
             if 2 * N > self.n_max:
-                warnings.warn(f"BVP at z={z:.4g} not resolved with N={N} (tail {tail.max():.2e})")
-                return c
+                tail = np.abs(c[-8:]).max()
+                warnings.warn(f"BVP at z={z:.4g} not resolved with N={N} (tail {tail:.2e})")
+                return c, False
             N *= 2
 
     def _compute_quasimatrices(self, V: NDArray[np.float64], nodes: NDArray, weights: NDArray):
@@ -428,7 +712,7 @@ class InfBeyn:
             A0, A1 as Chebyshev coefficients (padded to a common length) and the
             scale sum_k |w_k| ||T(z_k)^{-1}V|| / 2pi used as reference for the rank
         """
-        sols = [self._solve_bvp(z, V) for z in nodes]
+        sols = [self._solve_bvp(z, V)[0] for z in nodes]
         n = max(c.shape[0] for c in sols)
 
         A0 = np.zeros((n, V.shape[1]), dtype=complex)
@@ -449,9 +733,13 @@ class InfBeyn:
 _worker_solver: InfBeyn | None = None
 
 
-def _init_worker(solver: InfBeyn) -> None:
-    global _worker_solver
+_worker_shared = None
+
+
+def _init_worker(solver: InfBeyn, shared=None) -> None:
+    global _worker_solver, _worker_shared
     _worker_solver = solver
+    _worker_shared = shared
     # one BLAS thread per process, otherwise n_workers x n_cpu threads fight (~5x slower)
     threadpool_limits(1)
 
@@ -465,6 +753,244 @@ def _gamma_chunk(task: tuple, solver: InfBeyn | None = None) -> tuple[NDArray, N
     solver = solver or _worker_solver
     g = np.array([solver._gamma(zi, n, n_range) for zi in z]).reshape(-1, 2)
     return g[:, 0], g[:, 1]
+
+
+# ---------------------------------------------------------------------------
+# scan(): tiles, edges and parallel backends
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class Tile:
+    """Rectangle [x0, x1) x [y0, y1) of the complex plane visited by InfBeyn.scan()."""
+
+    x0: float
+    x1: float
+    y0: float
+    y1: float
+    depth: int = 0
+    eigvals: NDArray = field(default_factory=lambda: np.array([], dtype=complex))  # Beyn estimates inside
+    eigfuncs: NDArray = field(default_factory=lambda: np.zeros((0, 0), dtype=complex))
+    singular_values: NDArray | None = None  # of A0, relative to the resolvent scale
+    rank: int = 0
+    gap: float = np.inf
+    quad_err: float = 0.0  # |full - half rule eigenvalues| / size
+    reason: str = ""  # why the tile was rejected, "" if accepted
+
+    @property
+    def size(self) -> float:
+        return max(self.x1 - self.x0, self.y1 - self.y0)
+
+    @property
+    def perimeter(self) -> float:
+        return 2 * (self.x1 - self.x0 + self.y1 - self.y0)
+
+    def edges(self) -> list[tuple[complex, complex]]:
+        """Counterclockwise directed edges."""
+        c = [complex(self.x0, self.y0), complex(self.x1, self.y0), complex(self.x1, self.y1), complex(self.x0, self.y1)]
+        return [(c[k], c[(k + 1) % 4]) for k in range(4)]
+
+    def contains(self, z: NDArray, pad: float = 0.0) -> NDArray:
+        """Half-open, so that an eigenvalue on a shared edge belongs to exactly one tile."""
+        z = np.asarray(z)
+        p = pad * self.size
+        return (self.x0 - p <= z.real) & (z.real < self.x1 + p) & (self.y0 - p <= z.imag) & (z.imag < self.y1 + p)
+
+    def split(self) -> list["Tile"]:
+        """Four children, with the cut lines kept away from the current estimates."""
+        xc = _cut(self.x0, self.x1, self.eigvals.real)
+        yc = _cut(self.y0, self.y1, self.eigvals.imag)
+        return [
+            Tile(a, b, c, d, self.depth + 1)
+            for a, b in ((self.x0, xc), (xc, self.x1))
+            for c, d in ((self.y0, yc), (yc, self.y1))
+        ]
+
+
+@dataclass
+class ScanResult:
+    eigvals: NDArray  # polished eigenvalues in the region
+    eigfuncs: list  # Chebyshev coefficients of each eigenfunction on [-1, 1]
+    polished: NDArray  # bool: Newton converged close to the InfBeyn estimate
+    estimates: NDArray  # the InfBeyn estimates the eigenvalues were polished from
+    tiles: list  # accepted tiles
+    unresolved: list  # tiles still failing the acceptance tests at max_depth
+    n_solves: int  # number of BVP solves T(z)^{-1}V
+
+
+def _cut(a: float, b: float, pts: NDArray) -> float:
+    """
+    Cut position near the middle of [a, b], at least 10% of a child away from pts.
+    Slightly off-centre: eigenvalues often sit on symmetry lines (e.g. the real axis),
+    which an exact bisection of a symmetric region would put right on the cut.
+    """
+    margin = 0.05 * (b - a)
+    best, best_d = a + 0.47 * (b - a), -1.0
+    for t in (0.47, 0.57, 0.37, 0.67, 0.43, 0.53, 0.33, 0.63):
+        c = a + t * (b - a)
+        d = np.min(np.abs(pts - c)) if len(pts) else np.inf
+        if d >= margin:
+            return c
+        if d > best_d:
+            best, best_d = c, d
+    return best
+
+
+def _segment(p: complex, q: complex) -> tuple[tuple[complex, complex], int]:
+    """Canonical key of the edge p -> q (shared by both tiles adjacent to it) and its orientation."""
+    return ((p, q), 1) if (p.real, p.imag) < (q.real, q.imag) else ((q, p), -1)
+
+
+def _segment_nodes(a: complex, b: complex, rule: Cheb) -> tuple[list[complex], NDArray]:
+    """Clenshaw-Curtis nodes and weights on a -> b; the corners are exactly a and b (shared with other edges)."""
+    z = [complex(v) for v in (a + b) / 2 + (b - a) / 2 * rule.x]
+    z[0], z[-1] = b, a
+    return z, (b - a) / 2 * rule.w
+
+
+def _gap_rank(s: NDArray, noise_tol: float) -> tuple[int, float]:
+    """Rank at the largest gap s[m-1] / s[m] of the singular values above the noise floor."""
+    if len(s) == 0 or s[0] <= noise_tol:
+        return 0, np.inf
+    below = np.maximum(np.append(s[1:], 0.0), noise_tol)
+    gaps = np.where(s > noise_tol, s / below, 0.0)
+    m = int(np.argmax(gaps))
+    return m + 1, float(gaps[m])
+
+
+def _task_bvp(solver: InfBeyn, z: complex, V: NDArray):
+    return solver._solve_bvp(z, V)
+
+
+def _task_polish(solver: InfBeyn, task: tuple, _=None):
+    return solver.polish(*task)
+
+
+def _run_task(task, item):
+    return task(_worker_solver, item, _worker_shared)
+
+
+class _SerialBackend:
+    """Runs task(solver, item, shared) over a list of items. Tasks are module-level functions."""
+
+    worker = False
+
+    def __init__(self, solver: InfBeyn) -> None:
+        self.solver = solver
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc) -> bool:
+        return False
+
+    def map(self, task, items: list, shared=None) -> list:
+        with threadpool_limits(1):  # small matrices: BLAS threads only add overhead
+            return [task(self.solver, item, shared) for item in items]
+
+    def share(self, result):
+        return result
+
+
+class _ForkBackend(_SerialBackend):
+    """Forked worker processes on this machine; the pool lives for one scan()."""
+
+    def __init__(self, solver: InfBeyn, n_workers: int) -> None:
+        super().__init__(solver)
+        self.n_workers = n_workers
+        self.pool, self.shared = None, None
+
+    def __exit__(self, *exc) -> bool:
+        if self.pool is not None:
+            self.pool.shutdown()
+        return False
+
+    def map(self, task, items: list, shared=None) -> list:
+        if not items:
+            return []
+        if self.pool is None or shared is not self.shared:
+            # shared data reaches the workers through fork, not through pickling per task
+            if self.pool is not None:
+                self.pool.shutdown()
+            self.shared = shared
+            self.pool = ProcessPoolExecutor(
+                max_workers=self.n_workers,
+                mp_context=multiprocessing.get_context("fork"),
+                initializer=_init_worker,
+                initargs=(self.solver, shared),
+            )
+        chunk = max(1, len(items) // (4 * self.n_workers))
+        return list(self.pool.map(_run_task, [task] * len(items), items, chunksize=chunk))
+
+
+class _MPIBackend(_SerialBackend):
+    """
+    SPMD over an MPI communicator: rank 0 broadcasts (task, items, shared), every rank
+    (rank 0 included) runs items[rank::size], and rank 0 gathers the results. The
+    other ranks sit in serve() until rank 0 leaves the with-block.
+    """
+
+    def __init__(self, solver: InfBeyn, comm=None) -> None:
+        super().__init__(solver)
+        from mpi4py import MPI
+
+        self.comm = comm or MPI.COMM_WORLD
+        self.rank, self.size = self.comm.Get_rank(), self.comm.Get_size()
+        self.worker = self.rank != 0
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        if not self.worker:
+            if exc is not None and self.size > 1:
+                # the other ranks would wait forever for the next broadcast
+                traceback.print_exception(exc)
+                self.comm.Abort(1)
+            self.comm.bcast(None, root=0)  # release serve()
+        return False
+
+    def _local(self, task, items, shared):
+        try:
+            with threadpool_limits(1):
+                return [task(self.solver, item, shared) for item in items[self.rank :: self.size]]
+        except Exception as e:  # sent back to rank 0 instead of deadlocking
+            return e
+
+    def map(self, task, items: list, shared=None) -> list:
+        items = list(items)
+        self.comm.bcast((task, items, shared), root=0)
+        parts = self.comm.gather(self._local(task, items, shared), root=0)
+        out = [None] * len(items)
+        for r, part in enumerate(parts):
+            if isinstance(part, Exception):
+                raise RuntimeError(f"task failed on MPI rank {r}") from part
+            out[r :: self.size] = part
+        return out
+
+    def serve(self) -> None:
+        while (msg := self.comm.bcast(None, root=0)) is not None:
+            self.comm.gather(self._local(*msg), root=0)
+
+    def share(self, result):
+        return self.comm.bcast(result, root=0)
+
+
+def _launched_by_mpi() -> bool:
+    for var in ("PMI_SIZE", "OMPI_COMM_WORLD_SIZE", "MV2_COMM_WORLD_SIZE", "SLURM_NTASKS"):
+        if int(os.environ.get(var, "1")) > 1:
+            return True
+    return False
+
+
+def _make_backend(backend: str, solver: InfBeyn, n_workers: int | None, comm):
+    if backend == "auto":
+        backend = "mpi" if comm is not None or _launched_by_mpi() else "fork"
+    if backend == "mpi":
+        return _MPIBackend(solver, comm)
+    n_workers = n_workers or os.cpu_count() or 1
+    if backend == "serial" or n_workers == 1:
+        return _SerialBackend(solver)
+    if backend == "fork":
+        return _ForkBackend(solver, n_workers)
+    raise ValueError(f"unknown backend {backend!r}")
 
 
 def plot_pseudospectra(z, gamma, floor, eigvals=(), isolated=None, ax=None, n_levels: int = 10):
